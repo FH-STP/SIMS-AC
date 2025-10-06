@@ -5,36 +5,62 @@ echo =======================================================
 
 echo.
 echo [+] Creating project directory structure...
-mkdir api
-mkdir frontend
-mkdir nginx
-mkdir data
-mkdir data\sql
-mkdir data\mongo
-mkdir data\grafana
-mkdir data\portainer
+mkdir api > nul 2>&1
+mkdir frontend > nul 2>&1
+mkdir nginx > nul 2>&1
+mkdir data > nul 2>&1
+mkdir data\sql > nul 2>&1
+mkdir data\mongo > nul 2>&1
+mkdir data\grafana > nul 2>&1
+mkdir data\portainer > nul 2>&1
 
 echo.
-echo [+] Creating placeholder Dockerfiles and advanced nginx.conf...
-
-(echo # Placeholder for API Dockerfile) > api\Dockerfile
-(echo # Placeholder for Frontend Dockerfile) > frontend\Dockerfile
-(echo # Placeholder for NGINX Dockerfile) > nginx\Dockerfile
+echo [+] Creating Dockerfiles and advanced nginx.conf...
 
 (
-    echo events {}
+    echo # Use the official Microsoft ASP.NET runtime as a base image.
+    echo # This creates a lean Linux container with everything needed to run a compiled .NET app.
+    echo FROM mcr.microsoft.com/dotnet/aspnet:8.0
+    echo.
+    echo # Set the working directory inside the container
+    echo WORKDIR /app
+) > api\Dockerfile
+
+(
+    echo # Use the lightweight official NGINX image as a base
+    echo FROM nginx:alpine
+    echo.
+    echo # Create a simple placeholder HTML file to show it's working
+    echo RUN echo '<h1>Frontend is Running!' ^> /usr/share/nginx/html/index.html
+) > frontend\Dockerfile
+
+(
+    echo # Use the official NGINX image
+    echo FROM nginx:alpine
+    echo.
+    echo # Remove the default NGINX configuration file
+    echo RUN rm /etc/nginx/nginx.conf
+    echo.
+    echo # Copy your custom configuration file from the nginx folder into the container
+    echo COPY nginx.conf /etc/nginx/nginx.conf
+) > nginx\Dockerfile
+
+(
+    echo events { }
     echo http {
     echo     server {
     echo         listen 80;
-    echo         location / { proxy_pass http://frontend; }
-    echo         location /api/ { proxy_pass http://api; }
-    echo         location /grafana/ { proxy_pass http://grafana:3000/; }
-    echo         location /portainer/ { proxy_pass http://portainer:9000/; }
-    echo         location /portainer/api/websocket/ {
-    echo             proxy_set_header Upgrade $http_upgrade;
-    echo             proxy_set_header Connection "upgrade";
-    echo             proxy_http_version 1.1;
-    echo             proxy_pass http://portainer:9000/api/websocket/;
+    echo         location / {
+    echo             proxy_pass http://frontend:80;
+    echo         }
+    echo         location /api/ {
+    echo             proxy_pass http://api:8080/;
+    echo         }
+    echo         location /grafana/ {
+    echo             proxy_pass http://grafana:3000/;
+    echo         }
+    echo         location /portainer/ {
+    echo             proxy_pass http://portainer:9000/;
     echo         }
     echo     }
     echo }
@@ -43,13 +69,11 @@ echo [+] Creating placeholder Dockerfiles and advanced nginx.conf...
 echo.
 echo [+] Creating default .env file with placeholder credentials...
 (
-    echo # Default Environment Variables - CHANGE FOR PRODUCTION
+    echo # Default passwords for the databases
     echo SQL_PASSWORD=YourStrong!SQLPa55word
     echo MONGO_USER=simsadmin
     echo MONGO_PASSWORD=YourStrong!MongoPa55word
 ) > .env
-
-echo.
 echo [!] IMPORTANT: The .env file has been created with default passwords.
 
 echo.
@@ -63,5 +87,3 @@ echo      Access everything through http://localhost
 echo      (See README.md for specific service URLs)
 echo =======================================================
 
-echo.
-pause

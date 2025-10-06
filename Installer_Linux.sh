@@ -17,6 +17,13 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 # Set the working directory inside the container
 WORKDIR /app
+
+
+# This command is a standard Linux trick to keep the container running indefinitely.
+# It "tails" a special file that never ends, which prevents the container from
+# successfully completing its task and exiting.
+# This is crucial for keeping the container alive so NGINX and other services can connect to it.
+CMD ["tail", "-f", "/dev/null"]
 EOF
 
 cat <<EOF > frontend/Dockerfile

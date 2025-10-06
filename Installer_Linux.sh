@@ -52,8 +52,7 @@ echo "[!] IMPORTANT: The .env file has been created with default passwords."
 
 echo ""
 echo "[+] Starting Docker containers in detached mode..."
-sudo docker-compose up --build -d
-sudo docker compose up --build -d
+docker compose up --build -d
 
 echo ""
 echo "======================================================="
@@ -62,3 +61,5 @@ echo "     Access everything through http://localhost"
 echo "     (See README.md for specific service URLs)"
 echo "======================================================="
 echo ""
+
+

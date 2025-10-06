@@ -79,4 +79,3 @@ echo "      Setup Complete! The application is starting."
 echo "      Access everything through http://localhost"
 echo "      (See README.md for specific service URLs)"
 echo "======================================================="
-

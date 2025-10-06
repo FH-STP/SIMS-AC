@@ -33,6 +33,7 @@ services:
   # 4. SQL Database (for Incidents, Users)
   sql-db:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    user: "${UID}:${GID}"
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=${SQL_PASSWORD}
@@ -55,6 +56,7 @@ services:
   # 6. Grafana (for Data Visualization) - No longer exposed directly
   grafana:
     image: grafana/grafana:latest
+    user: "${UID}:${GID}"
     volumes:
       - ./data/grafana:/var/lib/grafana
     networks:
@@ -74,5 +76,4 @@ services:
 networks:
   sims-net:
     driver: bridge
-
 

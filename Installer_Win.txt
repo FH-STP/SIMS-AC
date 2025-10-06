@@ -1,0 +1,84 @@
+@echo off
+ECHO.
+ECHO  Setting up SIMS Project Structure for Docker...
+ECHO ===================================================
+ECHO.
+
+REM --- Create Directories ---
+IF NOT EXIST "api" (
+    MKDIR "api"
+    ECHO  Created directory: /api
+)
+IF NOT EXIST "frontend" (
+    MKDIR "frontend"
+    ECHO  Created directory: /frontend
+)
+IF NOT EXIST "nginx" (
+    MKDIR "nginx"
+    ECHO  Created directory: /nginx
+)
+ECHO.
+
+REM --- Create Placeholder Dockerfiles and NGINX Config ---
+IF NOT EXIST "api\Dockerfile" (
+    ECHO FROM scratch > api\Dockerfile
+    ECHO  Created placeholder: /api/Dockerfile
+)
+IF NOT EXIST "frontend\Dockerfile" (
+    ECHO FROM scratch > frontend\Dockerfile
+    ECHO  Created placeholder: /frontend/Dockerfile
+)
+IF NOT EXIST "nginx\Dockerfile" (
+    (
+        ECHO FROM nginx:alpine
+        ECHO COPY nginx.conf /etc/nginx/nginx.conf
+    ) > nginx\Dockerfile
+    ECHO  Created placeholder: /nginx/Dockerfile
+)
+IF NOT EXIST "nginx\nginx.conf" (
+    (
+        ECHO events {}
+        ECHO http {
+        ECHO     server {
+        ECHO         listen 80;
+        ECHO         location / {
+        ECHO             proxy_pass http://frontend:80;
+        ECHO         }
+        ECHO         location /api/ {
+        ECHO             proxy_pass http://api:80;
+        ECHO         }
+        ECHO     }
+        ECHO }
+    ) > nginx\nginx.conf
+    ECHO  Created placeholder: /nginx/nginx.conf
+)
+ECHO.
+
+REM --- Create .env file if it doesn't exist ---
+IF NOT EXIST ".env" (
+    ECHO  Creating .env file with default credentials...
+    (
+        ECHO # Passwords for the databases
+        ECHO SQL_PASSWORD=YourStrong!SQLPa55word
+        ECHO MONGO_USER=simsadmin
+        ECHO MONGO_PASSWORD=YourStrong!MongoPa55word
+    ) > .env
+    ECHO  IMPORTANT: Review and change the default passwords in the .env file!
+) ELSE (
+    ECHO  .env file already exists, skipping creation.
+)
+ECHO.
+
+REM --- Run Docker Compose ---
+ECHO ===================================================
+ECHO  Starting Docker containers in the background...
+ECHO.
+docker-compose up --build -d
+
+ECHO.
+ECHO ===================================================
+ECHO  Setup complete! The application is starting.
+ECHO  - NGINX is available at http://localhost
+ECHO  - Use "docker-compose down" to stop all containers.
+ECHO.
+PAUSE

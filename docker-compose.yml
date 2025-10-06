@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 1. NGINX Reverse Proxy (The ONLY public entry point)
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"             # ✅ This is the ONLY port exposed to the outside world.
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - sims-net
+
+  # 2. Frontend (The Website UI)
+  frontend:
+    build: ./frontend
+    networks:
+      - sims-net
+
+  # 3. API (The Backend Logic)
+  api:
+    build: ./api
+    environment:
+      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True
+      - MONGO_CONNECTION_STRING=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo-db:27017/
+    depends_on:
+      - sql-db
+      - mongo-db
+    networks:
+      - sims-net
+
+  # 4. SQL Database (for Incidents, Users)
+  sql-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SQL_PASSWORD}
+    volumes:
+      # Bind Mount: Maps the host's './data/sql' folder to the container's data directory.
+      - ./data/sql:/var/opt/mssql
+    networks:
+      - sims-net
+
+  # 5. MongoDB (for Comments, Pictures)
+  mongo-db:
+    image: mongo:latest
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      # Bind Mount: Maps the host's './data/mongo' folder to the container's data directory.
+      - ./data/mongo:/data/db
+    networks:
+      - sims-net
+
+# Define a shared network for all containers
+networks:
+  sims-net:
+    driver: bridge
+
+# The top-level 'volumes' section is no longer needed as we are using bind mounts now.
+

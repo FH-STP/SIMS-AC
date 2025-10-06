@@ -24,6 +24,11 @@ echo [+] Creating Dockerfiles and advanced nginx.conf...
     echo.
     echo # Set the working directory inside the container
     echo WORKDIR /app
+    echo # This command is a standard Linux trick to keep the container running indefinitely.
+    echo # It "tails" a special file that never ends, which prevents the container from
+    echo # successfully completing its task and exiting.
+    echo # This is crucial for keeping the container alive so NGINX and other services can connect to it.
+    echo CMD ["tail", "-f", "/dev/null"]
 ) > api\Dockerfile
 
 (

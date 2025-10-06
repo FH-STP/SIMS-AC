@@ -1,24 +1,26 @@
 version: '3.8'
 
 services:
-  # 1. NGINX Reverse Proxy (The ONLY public entry point)
+  # 1. NGINX Reverse Proxy (The ONLY public entry point for all services)
   nginx:
     build: ./nginx
     ports:
-      - "80:80"             # ✅ This is the ONLY port exposed to the outside world.
+      - "80:80"
     depends_on:
       - frontend
       - api
+      - grafana
+      - portainer
     networks:
       - sims-net
 
-  # 2. Frontend (The Website UI)
+  # 2. Frontend (The Website UI) - No longer exposed directly
   frontend:
     build: ./frontend
     networks:
       - sims-net
 
-  # 3. API (The Backend Logic)
+  # 3. API (The Backend Logic) - No longer exposed directly
   api:
     build: ./api
     environment:
@@ -37,7 +39,6 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=${SQL_PASSWORD}
     volumes:
-      # Bind Mount: Maps the host's './data/sql' folder to the container's data directory.
       - ./data/sql:/var/opt/mssql
     networks:
       - sims-net
@@ -49,8 +50,25 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
     volumes:
-      # Bind Mount: Maps the host's './data/mongo' folder to the container's data directory.
       - ./data/mongo:/data/db
+    networks:
+      - sims-net
+
+  # 6. Grafana (for Data Visualization) - No longer exposed directly
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    networks:
+      - sims-net
+
+  # 7. Portainer (for Docker Container Management) - No longer exposed directly
+  portainer:
+    image: portainer/portainer-ce:latest
+    volumes:
+      # Mounts the Docker socket to allow Portainer to manage containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/portainer:/data
     networks:
       - sims-net
 
@@ -58,6 +76,3 @@ services:
 networks:
   sims-net:
     driver: bridge
-
-# The top-level 'volumes' section is no longer needed as we are using bind mounts now.
-

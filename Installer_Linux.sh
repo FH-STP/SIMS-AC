@@ -1,71 +1,63 @@
 #!/bin/bash
+echo "======================================================="
+echo "         SIMS Project Setup Script for Linux"
+echo "======================================================="
 
 echo ""
-echo " Setting up SIMS Project Structure for Docker..."
-echo "==================================================="
-echo ""
+echo "[+] Creating project directory structure..."
+mkdir -p api
+mkdir -p frontend
+mkdir -p nginx
+mkdir -p data/sql
+mkdir -p data/mongo
+mkdir -p data/grafana
+mkdir -p data/portainer
 
-# --- Create Directories ---
-mkdir -p api frontend nginx
-echo " Created directories: /api, /frontend, /nginx"
 echo ""
+echo "[+] Creating placeholder Dockerfiles and advanced nginx.conf..."
+echo "# Placeholder for API Dockerfile" > api/Dockerfile
+echo "# Placeholder for Frontend Dockerfile" > frontend/Dockerfile
+echo "# Placeholder for NGINX Dockerfile" > nginx/Dockerfile
 
-# --- Create Placeholder Dockerfiles and NGINX Config ---
-if [ ! -f "api/Dockerfile" ]; then
-    echo "FROM scratch" > api/Dockerfile
-    echo " Created placeholder: /api/Dockerfile"
-fi
-if [ ! -f "frontend/Dockerfile" ]; then
-    echo "FROM scratch" > frontend/Dockerfile
-    echo " Created placeholder: /frontend/Dockerfile"
-fi
-if [ ! -f "nginx/Dockerfile" ]; then
-    echo -e "FROM nginx:alpine\nCOPY nginx.conf /etc/nginx/nginx.conf" > nginx/Dockerfile
-    echo " Created placeholder: /nginx/Dockerfile"
-fi
-if [ ! -f "nginx/nginx.conf" ]; then
-    cat <<EOF > nginx/nginx.conf
+cat <<EOL > nginx/nginx.conf
 events {}
 http {
     server {
         listen 80;
-        location / {
-            proxy_pass http://frontend:80;
-        }
-        location /api/ {
-            proxy_pass http://api:80;
+        location / { proxy_pass http://frontend; }
+        location /api/ { proxy_pass http://api; }
+        location /grafana/ { proxy_pass http://grafana:3000/; }
+        location /portainer/ { proxy_pass http://portainer:9000/; }
+        location /portainer/api/websocket/ {
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_http_version 1.1;
+            proxy_pass http://portainer:9000/api/websocket/;
         }
     }
 }
-EOF
-    echo " Created placeholder: /nginx/nginx.conf"
-fi
-echo ""
+EOL
 
-# --- Create .env file if it doesn't exist ---
-if [ ! -f ".env" ]; then
-    echo " Creating .env file with default credentials..."
-    cat <<EOF > .env
-# Passwords for the databases
+echo ""
+echo "[+] Creating default .env file with placeholder credentials..."
+cat <<EOL > .env
+# Default Environment Variables - CHANGE FOR PRODUCTION
 SQL_PASSWORD=YourStrong!SQLPa55word
 MONGO_USER=simsadmin
 MONGO_PASSWORD=YourStrong!MongoPa55word
-EOF
-    echo " IMPORTANT: Review and change the default passwords in the .env file!"
-else
-    echo " .env file already exists, skipping creation."
-fi
-echo ""
+EOL
 
-# --- Run Docker Compose ---
-echo "==================================================="
-echo " Starting Docker containers in the background..."
 echo ""
+echo "[!] IMPORTANT: The .env file has been created with default passwords."
+
+echo ""
+echo "[+] Starting Docker containers in detached mode..."
 docker-compose up --build -d
 
 echo ""
-echo "==================================================="
-echo " Setup complete! The application is starting."
-echo " - NGINX is available at http://localhost"
-echo " - Use \"docker-compose down\" to stop all containers."
+echo "======================================================="
+echo "     Setup Complete! The application is starting."
+echo "     Access everything through http://localhost"
+echo "     (See README.md for specific service URLs)"
+echo "======================================================="
 echo ""

@@ -36,7 +36,7 @@ echo [+] Creating Dockerfiles and advanced nginx.conf...
     echo FROM nginx:alpine
     echo.
     echo # Create a simple placeholder HTML file to show it's working
-    echo RUN echo '<h1>Frontend is Running!' ^> /usr/share/nginx/html/index.html
+    echo RUN echo ^'^<h1^>Frontend is Running! ^</h1^>^' ^> /usr/share/nginx/html/index.html
 ) > frontend\Dockerfile
 
 (

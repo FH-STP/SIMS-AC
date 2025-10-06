@@ -52,8 +52,8 @@ echo "[!] IMPORTANT: The .env file has been created with default passwords."
 
 echo ""
 echo "[+] Starting Docker containers in detached mode..."
-docker-compose up --build -d
-docker compose up --build -d
+sudo docker-compose up --build -d
+sudo docker compose up --build -d
 
 echo ""
 echo "======================================================="

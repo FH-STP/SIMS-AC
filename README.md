@@ -11,7 +11,7 @@ To get the entire application stack running on your local machine, please follow
 
 1.  Make sure you have Docker Desktop installed and running.
     
-2.  Simply double-click and run the `setup-and-run.bat` file.
+2.  Simply double-click and run the `Installer_Windows.bat` file.
     
 
 ### On Linux / macOS
@@ -20,9 +20,9 @@ To get the entire application stack running on your local machine, please follow
     
 2.  Open a terminal in the project's root directory.
     
-3.  Make the setup script executable: `chmod +x setup-and-run.sh`
+3.  Make the setup script executable: `sudo chmod +x Installer_Linux.sh`
     
-4.  Run the script: `./setup-and-run.sh`
+4.  Run the script: `sudo ./Installer_Linux.sh`
     
 
 ## Accessing Services via NGINX

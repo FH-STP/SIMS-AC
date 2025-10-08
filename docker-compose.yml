@@ -1,0 +1,85 @@
+services:
+  # 1. Frontend (The Website UI)
+  frontend:
+    build: ./setup/frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped # <-- Ensures the container restarts automatically
+    networks:
+      - sims-net
+
+  # 2. API (The Backend Logic)
+  api:
+    build: ./setup/api
+    ports:
+      - "5000:80"
+    environment:
+      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True
+      - MONGO_CONNECTION_STRING=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo-db:27017/sims
+    depends_on:
+      - sql-db
+      - mongo-db
+    restart: unless-stopped # <-- Ensures the container restarts automatically
+    networks:
+      - sims-net
+
+  # 3. SQL Database (for Incidents, Users)
+  sql-db:
+    build: ./setup/mssql-init
+    user: "${UID}:${GID}"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SQL_PASSWORD}
+    volumes:
+      - ./data/sql:/var/opt/mssql
+    ports:
+      - "1433:1433"
+    restart: unless-stopped # <-- Ensures the container restarts automatically
+    networks:
+      - sims-net
+
+  # 4. MongoDB (for Comments, Pictures)
+  mongo-db:
+    image: mongo:latest
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      - ./data/mongo:/data/db
+      - ./setup/mongo-init:/docker-entrypoint-initdb.d
+    ports:
+      - "27017:27017"
+    restart: unless-stopped # <-- Ensures the container restarts automatically
+    networks:
+      - sims-net
+
+  # 5. Grafana (for Data Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    user: "${UID}:${GID}"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    restart: unless-stopped # <-- Ensures the container restarts automatically
+    networks:
+      - sims-net
+
+  # 6. Portainer (for Docker Container Management)
+  portainer:
+    image: portainer/portainer-ce:latest
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/portainer:/data
+    restart: unless-stopped # <-- Ensures the container restarts automatically
+    networks:
+      - sims-net
+
+# Define a shared network for all containers
+networks:
+  sims-net:
+    driver: bridge
+
+

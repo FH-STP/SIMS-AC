@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# # Von uns zusätzlich ignorierte Directorys und files
+data/

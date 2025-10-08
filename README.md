@@ -1,60 +1,79 @@
 
-# SIMS - Security Incident Management System
+# SIMS Project - Quick Start Guide
 
-Welcome to the SIMS project! This application provides a full-stack environment for managing IT security incidents, all containerized with Docker.
+This project uses Docker to run a multi-container application for the Security Incident Management System (SIMS). This guide will help you get the entire environment up and running with a single command.
 
-## Getting Started
+### Prerequisites
 
-To get the entire application stack running on your local machine, please follow the instructions for your operating system. All services are accessed through a single entry point.
+Before you begin, you **must** have the following software installed on your system:
 
-### On Windows
-
-1.  Make sure you have Docker Desktop installed and running.
+1.  **Docker & Docker Compose:**
     
-2.  Simply double-click and run the `Installer_Windows.bat` file.
-    
-
-### On Linux / macOS
-
-1.  Make sure you have Docker and Docker Compose installed and running.
-    
-2.  Open a terminal in the project's root directory.
-    
-3.  Make the setup script executable: `sudo chmod +x Installer_Linux.sh`
-    
-4.  Run the script: `sudo ./Installer_Linux.sh`
-    
-
-## Accessing Services via NGINX
-
-Once the containers are running, you can access the different parts of the system using the following URLs. All traffic is routed securely through the NGINX reverse proxy.
-
--   **Main Web Application**: [http://localhost/](https://www.google.com/search?q=http://localhost/ "null")
-    
-    -   This is the main user interface for the Security Incident Management System.
+    -   **Windows/macOS:**  [Docker Desktop](https://www.docker.com/products/docker-desktop/ "null") is the easiest way to get both.
         
--   **API Endpoint**: `http://localhost/api/`
+    -   **Linux:** Install [Docker Engine](https://docs.docker.com/engine/install/ "null") and the [Docker Compose Plugin](https://docs.docker.com/compose/install/ "null").
+        
+2.  **Git:**
     
-    -   The backend logic is available under this path.
-        
--   **Grafana (Visualization)**: [http://localhost/grafana/](https://www.google.com/search?q=http://localhost/grafana/ "null")
-    
-    -   Used for creating dashboards to visualize incident data.
-        
-    -   **Default Login**: `admin` / `admin` (you will be prompted to change this on first login).
-        
--   **Portainer (Container Management)**: [http://localhost/portainer/](https://www.google.com/search?q=http://localhost/portainer/ "null")
-    
-    -   A graphical interface to see and manage your running Docker containers.
-        
-    -   On your first visit, you will need to create an `admin` user and password. When asked, select the **"Docker"** environment to manage.
+    -   Required for cloning the project repository. You can download it from [git-scm.com](https://git-scm.com/downloads "null").
         
 
-## Stopping the Application
+### How to Run the Project
 
-To stop all running containers, open a terminal in the project directory and run:
+**Step 1: Get the Project Files**
+
+First, clone the project repository from GitHub to your local machine:
 
 ```
-docker-compose down
+git clone <your-repository-url>
+cd <project-folder>
+
+```
+
+**Step 2: Run the Installer**
+
+The installer script will prepare the environment and start all the Docker containers.
+
+-   **On Windows:** Double-click the `setup-and-run.bat` file or run it from your command prompt:
+    
+    ```
+    setup-and-run.bat
+    
+    ```
+    
+-   **On Linux or macOS:** First, you need to make the script executable. Then, run it.
+    
+    ```
+    # Make the script executable (only needs to be done once)
+    chmod +x setup-and-run.sh
+    
+    # Run the script
+    ./setup-and-run.sh
+    
+    ```
+    
+
+The first time you run the script, Docker will download and build all the necessary images, which may take several minutes.
+
+### Services Overview
+
+Once the setup is complete, all services will be running. You can access them at the following URLs:
+
+| Service   | Purpose                         | Access URL                        |
+| :-------- | :------------------------------ | :-------------------------------- |
+| Frontend  | The main web user interface.    | `http://localhost:8080`           |
+| API       | The backend logic service.      | `http://localhost:5000`           |
+| Grafana   | For data visualization.         | `http://localhost:3000`           |
+| Portainer | For managing Docker containers. | `https://localhost:9443`          |
+| SQL-DB    | MS SQL database.                | `localhost,1433` (via clients)    |
+| MongoDB   | NoSQL database.                 | `localhost:27017` (via clients)   |
+
+### How to Reset the Environment
+
+If you need to get a completely fresh installation (for example, to re-run the database setup scripts), navigate to the project directory in your terminal and run:
+
+```
+# This stops all containers and deletes all persistent data
+docker compose down --volumes
 
 ```

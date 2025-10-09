@@ -5,13 +5,26 @@ using Microsoft.Data.SqlClient;
 using Dapper;
 using sims.Misc;
 using sims.Models;
+using sims.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace sims.Controllers;
 
 [ApiController]
 [Route("[controller]")]
+[Authorize]
 public class UserController : ControllerBase
 {
+
+    private readonly JwtService JwtService;
+
+    public UserController(JwtService jwtService)
+    {
+        JwtService = jwtService;
+    }
+
+     
+    [AllowAnonymous]
     [HttpPost(Name = "CreateUser")]
     public IActionResult CreateUser([FromBody] User user)
     {
@@ -27,16 +40,14 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("Login")]
-    public IActionResult Login([FromBody] String user, String passwort)
+    public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-        //TODO
-        if (user == "Test")
+        var Tesult = await JwtService.Authenticate(loginRequest);
+        if(Tesult is null)
         {
-            if (passwort != "Admin123")
-            {
-                return Ok(); //TODO implement jwt token
-            }
+            return Unauthorized();
         }
+
         return BadRequest();
     }
 

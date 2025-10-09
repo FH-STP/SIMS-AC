@@ -1,0 +1,81 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Open Incidents",
+      "type": "stat",
+      "datasource": "MSSQL-SIMS",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [{ "refId": "A", "datasource": "MSSQL-SIMS", "rawSql": "SELECT count(*) FROM Incidents WHERE Status < 3" }]
+    },
+    {
+      "id": 2,
+      "title": "Critical Open Incidents",
+      "type": "stat",
+      "datasource": "MSSQL-SIMS",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" },
+      "targets": [{ "refId": "A", "datasource": "MSSQL-SIMS", "rawSql": "SELECT count(*) FROM Incidents WHERE Status < 3 AND Severity = 4" }]
+    },
+    {
+      "id": 3,
+      "title": "Incidents by Status",
+      "type": "piechart",
+      "datasource": "MSSQL-SIMS",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 0 },
+      "options": { "displayLabels": ["name", "percent"], "legend": { "displayMode": "list", "placement": "right" }, "pieType": "pie" },
+      "targets": [{ "refId": "A", "datasource": "MSSQL-SIMS", "rawSql": "SELECT CASE WHEN Status = 1 THEN 'New' WHEN Status = 2 THEN 'In Progress' ELSE 'Closed' END as Status, count(*) as count FROM Incidents GROUP BY Status" }]
+    },
+    {
+      "id": 4,
+      "title": "Incident Creation Over Time",
+      "type": "timeseries",
+      "datasource": "MSSQL-SIMS",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [{ "refId": "A", "datasource": "MSSQL-SIMS", "rawSql": "SELECT Creation_Time as time, count(*) as 'new incidents' FROM Incidents GROUP BY Creation_Time ORDER BY 1" }]
+    },
+    {
+      "id": 5,
+      "title": "Open Incidents by Owner",
+      "type": "barchart",
+      "datasource": "MSSQL-SIMS",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "options": { "legend": { "displayMode": "hidden" }, "orientation": "horizontal", "textMode": "value", "valueMode": "color" },
+      "targets": [{ "refId": "A", "datasource": "MSSQL-SIMS", "rawSql": "SELECT u.Username, count(i.ID) as count FROM Incidents i JOIN Users u ON i.OwnerID = u.ID WHERE i.Status < 3 GROUP BY u.Username" }]
+    }
+  ],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SIMS Overview Dashboard",
+  "uid": "sims-overview",
+  "version": 1,
+  "weekStart": ""
+}

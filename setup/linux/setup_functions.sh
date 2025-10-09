@@ -4,7 +4,7 @@
 #       SIMS Project Setup Logic for Linux/macOS
 # =======================================================
 
-setup_main() {
+main_setup() {
     echo ""
     echo "======================================================="
     echo "        SIMS Project Setup for Linux/macOS"

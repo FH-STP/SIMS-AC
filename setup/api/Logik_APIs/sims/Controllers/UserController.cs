@@ -12,16 +12,16 @@ namespace sims.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-[Authorize]
+//[Authorize]
 public class UserController : ControllerBase
 {
 
-    private readonly JwtService JwtService;
+    /*private readonly JwtService JwtService;
 
     public UserController(JwtService jwtService)
     {
         JwtService = jwtService;
-    }
+    }*/
 
      
     [AllowAnonymous]
@@ -42,11 +42,11 @@ public class UserController : ControllerBase
     [HttpPost("Login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-        var Tesult = await JwtService.Authenticate(loginRequest);
+        /*var Tesult = await JwtService.Authenticate(loginRequest);
         if(Tesult is null)
         {
             return Unauthorized();
-        }
+        }*/
 
         return BadRequest();
     }

@@ -7,5 +7,5 @@
 source ./setup/linux/setup_functions.sh
 
 # Run the main setup process
-setup_main
+main_setup
 

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using sims.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Data.SqlClient;
+using sims.Misc;
 
 namespace sims.Controllers;
 
@@ -13,29 +15,72 @@ public class IncidentController : ControllerBase
 {
 
     [HttpGet("GetIncidentInfo/{id}")]
-    public IActionResult GetIncidentInfo(string id)
+    public IActionResult GetIncidentInfo([FromBody] int id)
     {
-        //TODO
-        Incident incident = new Incident(int.Parse(id), 0, 0, "Malware", "Computer 1 got infected with Shai Hulud",
-                  "", 5, 1, 1, DateTime.Now);
-        return Ok(incident);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time FROM Users";
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sqlRead, conn);
+        var reader = Command.ExecuteReader();
+        conn.Close();
+
+        if (reader.HasRows)
+        {
+            while (reader.Read())
+            {
+                if (reader.GetInt32(0) == id)
+                {
+                    return Ok(new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
+                  reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8)));
+                }
+            }
+        }
+        return BadRequest();
     }
 
     [HttpGet("GetIncidentList")]
     public IActionResult GetIncidentList()
     {
-        //TODO
-        Incident[] incidentList = new Incident[1];
-        incidentList[0] = new Incident(0, 0, 0, "Malware", "Computer 1 got infected with Shai Hulud",
-                  "", 5, 1, 1, DateTime.Now);
+        Incident[] incidentList = new Incident[25];
+        int iterator = 0;
+
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time FROM Users ORDER BY id DESC LIMIT 25";
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sqlRead, conn);
+        var reader = Command.ExecuteReader();
+        conn.Close();
+
+        if (reader.HasRows)
+        {
+            while (reader.Read())
+            {
+                incidentList[iterator] = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
+                    reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8));
+                iterator++;
+            }
+        }
         return Ok(incidentList);
     }
 
     [HttpPost(Name = "CreateIncident")]
     public IActionResult CreateIncident([FromBody] Incident incident)
     {
-        //TODO
-        incident.Id = 777;
+        //TODO Authentication + SQL-Injection Prevention
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID) VALUES ('" +
+        incident.Owner + "', '" + incident.Creator + "', " + incident.APIText + "', " + Convert.ToString(DateTime.Now) +"', " + incident.Severity + "', '" + incident.Status + "', " + incident.NotesText + "', " + incident.Conclusion + ");";
+        
+        
+        conn.Open();
+        var Command = new SqlCommand(SQLInsert, conn);
+        Command.ExecuteNonQuery();
+        conn.Close();
+
         return CreatedAtAction(nameof(CreateIncident), new { id = incident.Id }, incident);
     }
 

@@ -17,9 +17,12 @@ GO
 CREATE TABLE Users (
     ID INT IDENTITY(1,1) PRIMARY KEY,
     Username NVARCHAR(100) NOT NULL UNIQUE,
-    PasswordHash VARBINARY(256) NOT NULL,
-    PasswordSalt VARBINARY(256) NOT NULL,
-    Is_Admin BIT NOT NULL DEFAULT 0
+    PasswordHash varchar(1024) NOT NULL,
+    PasswordSalt varchar(1024) NOT NULL,
+    EMail varchar(1024) NOT NULL,
+    Telephone varchar(1024) NOT NULL,
+    Is_Admin BIT NOT NULL DEFAULT 0,
+    IsDisabled BIT NOT NULL DEFAULT 0
 );
 
 -- =================================================================

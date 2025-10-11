@@ -490,8 +490,8 @@ function loadGrafana() {
     };
     
     // If iframe src is not set or needs refresh
-    if (!elements.grafanaFrame.src.includes('/grafana/')) {
-        elements.grafanaFrame.src = '/grafana/';
+    if (!elements.grafanaFrame.src.includes('localhost:3000')) {
+        elements.grafanaFrame.src = 'http://localhost:3000';
     }
 }
 

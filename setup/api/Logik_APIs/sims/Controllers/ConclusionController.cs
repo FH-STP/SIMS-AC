@@ -9,7 +9,7 @@ namespace sims.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-//[Authorize]
+[Authorize]
 public class ConclusionController : ControllerBase
 {
 

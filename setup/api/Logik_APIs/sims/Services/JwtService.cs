@@ -19,7 +19,7 @@ namespace sims.Services
 
         public async Task<LoginResponse?> Authenticate(LoginRequest request)
         {
-            if (string.IsNullOrEmpty(request.UserName) || string.IsNullOrEmpty(request.UserName))
+            if (string.IsNullOrEmpty(request.UserName) || string.IsNullOrEmpty(request.UserName) || (request.ID==null))
             {
                 return null;
             }

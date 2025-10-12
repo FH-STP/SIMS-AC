@@ -7,6 +7,7 @@ using sims.Misc;
 using sims.Models;
 using sims.Services;
 using Microsoft.AspNetCore.Authorization;
+using System.Data;
 
 namespace sims.Controllers;
 
@@ -31,11 +32,13 @@ public class AccountController : ControllerBase
         int UserID = 0;
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID FROM Users WHERE Username='"+loginRequest.UserName+"';";
+        var sqlRead = "SELECT ID FROM Users WHERE Username= @Name;";
 
         // Get ID
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
+        Command.Parameters.Add("@Name", SqlDbType.VarChar);
+        Command.Parameters["@Name"].Value = loginRequest.UserName;
         var reader = Command.ExecuteReader();
         if (reader.HasRows)
         {
@@ -45,10 +48,14 @@ public class AccountController : ControllerBase
             }
         }
         conn.Close();
-        loginRequest.ID=UserID;
+        loginRequest.ID = UserID;
 
         // Verity PW
-        Boolean correctPw = UserController.verifyPW(UserID,loginRequest.Password);
+        if (loginRequest.Password == null)
+        {
+            return BadRequest("Password is null.");
+        }
+        Boolean correctPw = UserController.verifyPW(UserID, loginRequest.Password);
         if (!correctPw)
         {
             return Unauthorized();
@@ -57,7 +64,7 @@ public class AccountController : ControllerBase
         var Tesult = await JwtService.Authenticate(loginRequest);
         if(Tesult is null)
         {
-            return BadRequest();
+            return BadRequest("Impossible Error.");
         }
 
         return Ok(Tesult);

@@ -5,12 +5,13 @@ using sims.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.SqlClient;
 using sims.Misc;
+using System.Data;
 
 namespace sims.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-//[Authorize]
+[Authorize]
 public class IncidentController : ControllerBase
 {
 
@@ -41,7 +42,7 @@ public class IncidentController : ControllerBase
 
         conn.Close();
                 
-        return BadRequest();
+        return BadRequest("Incident not found.");
     }
 
     [HttpGet("GetIncidentList")]
@@ -78,17 +79,34 @@ public class IncidentController : ControllerBase
     {
         //TODO Authentication + SQL-Injection Prevention
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        String IsDisabled = "0";
-        if (incident.IsDisabled)
-        {
-            IsDisabled = "1";
-        }
-        var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID,IsDisabled) VALUES ('" +
-        incident.Owner + "', '" + incident.Creator + "', '" + incident.Title + "', '" + incident.APIText + "', '" + Convert.ToString(DateTime.Now) +"', '" + incident.Severity + "', '" + incident.Status + "', '" + incident.NotesText + "', '" + incident.Conclusion + "', " + IsDisabled + ");";
+        var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID,IsDisabled) VALUES (" +
+        "@Owner, @Creator, @Title, @API_Text, @TimeNow, @Severity, @Status, @Notes, @Conclusio, @IsItDisabled);";
         
         
         conn.Open();
         var Command = new SqlCommand(SQLInsert, conn);
+
+        Command.Parameters.Add("@Owner", SqlDbType.Int);
+        Command.Parameters["@Owner"].Value = incident.Owner;
+        Command.Parameters.Add("@Creator", SqlDbType.Int);
+        Command.Parameters["@Creator"].Value = incident.Creator;
+        Command.Parameters.Add("@Title", SqlDbType.VarChar);
+        Command.Parameters["@Title"].Value = incident.Title;
+        Command.Parameters.Add("@API_Text", SqlDbType.VarChar);
+        Command.Parameters["@API_Text"].Value = incident.APIText;
+        Command.Parameters.Add("@TimeNow", SqlDbType.DateTime);
+        Command.Parameters["@TimeNow"].Value = DateTime.Now;
+        Command.Parameters.Add("@Severity", SqlDbType.Int);
+        Command.Parameters["@Severity"].Value = incident.Severity;
+        Command.Parameters.Add("@Status", SqlDbType.Int);
+        Command.Parameters["@Status"].Value = incident.Status;
+        Command.Parameters.Add("@Notes", SqlDbType.VarChar);
+        Command.Parameters["@Notes"].Value = incident.NotesText;
+        Command.Parameters.Add("@Conclusio", SqlDbType.Int);
+        Command.Parameters["@Conclusio"].Value = incident.Conclusion;
+        Command.Parameters.Add("@IsItDisabled", SqlDbType.Bit);
+        Command.Parameters["@IsItDisabled"].Value = incident.IsDisabled;
+
         Command.ExecuteNonQuery();
         conn.Close();
 
@@ -98,41 +116,124 @@ public class IncidentController : ControllerBase
     [HttpDelete(Name = "DisableIncident")]
     public IActionResult DisableIncident([FromBody] int id)
     {
-        //TODO
-        return NoContent();
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "UPDATE Incidents SET IsDisabled=1 WHERE ID=@ID;";
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@ID", SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
+        int retValue = Command.ExecuteNonQuery();
+
+        conn.Close();
+                
+        return Ok(retValue);
     }
 
     [HttpPut("Escalate")]
     public IActionResult Escalate([FromBody] int id, int severity)
     {
-        //TODO
-        return Ok();
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "UPDATE Incidents SET Severity=@Severity WHERE ID=@ID;";
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@Severity", SqlDbType.Int);
+        Command.Parameters["@Severity"].Value = severity;
+        Command.Parameters.Add("@ID", SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
+        int retValue = Command.ExecuteNonQuery();
+
+        conn.Close();
+                
+        return Ok(retValue);
     }
 
     [HttpPut("ChangeStatus")]
-    public IActionResult ChangeStatus([FromBody] int id, int status)
+    public IActionResult ChangeStatus([FromBody] int id, int Status)
     {
-        //TODO
-        return Ok();
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "UPDATE Incidents SET Status=@Status WHERE ID=@ID;";
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@Status", SqlDbType.Int);
+        Command.Parameters["@Status"].Value = Status;
+        Command.Parameters.Add("@ID", SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
+        int retValue = Command.ExecuteNonQuery();
+
+        conn.Close();
+                
+        return Ok(retValue);
+    }
+
+    [HttpPut("ChangeConclusion")]
+    public IActionResult ChangeConclusion([FromBody] int id, int ConclusionID)
+    {
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "UPDATE Incidents SET ConclusionID=@ConclusionID WHERE ID=@ID;";
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@ConclusionID", SqlDbType.Int);
+        Command.Parameters["@ConclusionID"].Value = ConclusionID;
+        Command.Parameters.Add("@ID", SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
+        int retValue = Command.ExecuteNonQuery();
+
+        conn.Close();
+                
+        return Ok(retValue);
     }
 
     [HttpPut("ChangeNotes")]
     public IActionResult ChangeNotes([FromBody] int id, string notes)
     {
-        //TODO
-        return Ok();
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "UPDATE Incidents SET Notes_Text=@Notes_Text WHERE ID="+Convert.ToString(id);
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@Notes_Text", SqlDbType.VarChar);
+        Command.Parameters["@Notes_Text"].Value = notes;
+        Command.Parameters.Add("@ID", SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
+        int retValue = Command.ExecuteNonQuery();
+
+        conn.Close();
+                
+        return Ok(retValue);
     }
 
     [HttpPut("Assign")]
     public IActionResult Assign([FromBody] int id, int owner)
     {
-        //TODO
-        return Ok();
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "UPDATE Incidents SET OwnerID=@OwnerID WHERE ID="+Convert.ToString(id);
+        //TODO Authentication
+
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@OwnerID", SqlDbType.Int);
+        Command.Parameters["@OwnerID"].Value = owner;
+        Command.Parameters.Add("@ID", SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
+        int retValue = Command.ExecuteNonQuery();
+
+        conn.Close();
+                
+        return Ok(retValue);
     }
 
-
+    [AllowAnonymous]
     [HttpPost("InserTestInfoIncidents")]
-    public async Task<IActionResult> InserTestInfoUser()
+    public async Task<IActionResult> InserTestInfoIncidents()
     {
         for (int iterator = 0; iterator < 30; iterator++)
         {

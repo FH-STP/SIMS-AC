@@ -8,6 +8,7 @@ using sims.Models;
 using sims.Services;
 using Microsoft.AspNetCore.Authorization;
 using NSec.Cryptography;
+using System.Text.RegularExpressions;
 
 
 namespace sims.Controllers;
@@ -17,7 +18,7 @@ namespace sims.Controllers;
 [Authorize]
 public class UserController : ControllerBase
 {
-    [AllowAnonymous]
+
     [HttpPost(Name = "CreateUser")]
     public IActionResult CreateUser([FromBody] User user)
     {
@@ -31,19 +32,31 @@ public class UserController : ControllerBase
             int x = rnd.Next(str.Length);
             salt = salt + str[x];
         }
-        //TODO Authentication + Password Strenght check
+        //TODO Authentication
+        Boolean isThePWStrong = checkPWRequriements(user.Password);
+        if (!isThePWStrong)
+        {
+            return BadRequest("Password to weak!");
+        }
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var PWHash = argon2Hasher.DeriveBytes(user.Password, Convert.FromHexString(salt), 256);
-        String isAdmin = "0";
-        if (user.isAdmin)
-        {
-            isAdmin = "1";
-        }
-        var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin, Telephone,EMail) VALUES ('" + user.UserName + "', '" + Convert.ToHexString(PWHash) + "', '" + salt + "', " + isAdmin + " , '" + user.Telephone +"', '" + user.EMail +  "');";
+        var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin, Telephone,EMail) VALUES (@Username, @HASH, @SALT, @isAdmin, @Telephone, @Email);";
         
         
         conn.Open();
         var Command = new SqlCommand(SQLInsert, conn);
+        Command.Parameters.Add("@Username", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@Username"].Value = user.UserName;
+        Command.Parameters.Add("@HASH", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@HASH"].Value = Convert.ToHexString(PWHash);
+        Command.Parameters.Add("@SALT", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@SALT"].Value = salt;
+        Command.Parameters.Add("@isAdmin", System.Data.SqlDbType.Bit);
+        Command.Parameters["@isAdmin"].Value = user.isAdmin;
+        Command.Parameters.Add("@Telephone", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@Telephone"].Value = user.Telephone;
+        Command.Parameters.Add("@Email", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@Email"].Value = user.EMail;
         Command.ExecuteNonQuery();
         conn.Close();
             
@@ -54,25 +67,34 @@ public class UserController : ControllerBase
     [HttpPut(Name = "ChangePassword")]
     public IActionResult ChangePassword([FromBody] PasswordChange passwordChange)
     {
-        //TODO Auth???
         Random rnd = new Random();
         var argon2Hasher = getArgon2idHasher();
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
 
         //Veryfy Password
         Boolean correctPw = verifyPW(passwordChange.id, passwordChange.PasswordOld);
-        
+        Boolean isThePWStrong = checkPWRequriements(passwordChange.PasswordNew);
+        if (!isThePWStrong)
+        {
+            return BadRequest("Password to weak!");
+        }
 
         if (correctPw)
         {
             //Update Password
             var salt = Convert.ToString(rnd.Next(0, 999999999));
             var PWHash = argon2Hasher.DeriveBytes(passwordChange.PasswordNew, Convert.FromHexString(salt), 256);
-            var sql = "UPDATE Users SET PasswordHash=" + Convert.ToHexString(PWHash) + ", PasswordSalt=" + salt + " WHERE ID=" + Convert.ToString(passwordChange.id);
+            var sql = "UPDATE Users SET PasswordHash=@HASH, PasswordSalt=@SALT WHERE ID=@ID"; 
 
 
             conn.Open();
             var Command = new SqlCommand(sql, conn);
+            Command.Parameters.Add("@HASH", System.Data.SqlDbType.VarChar);
+            Command.Parameters["@HASH"].Value = Convert.ToHexString(PWHash);
+            Command.Parameters.Add("@SALT", System.Data.SqlDbType.VarChar);
+            Command.Parameters["@SALT"].Value = salt;
+            Command.Parameters.Add("@ID", System.Data.SqlDbType.Int);
+            Command.Parameters["@ID"].Value = passwordChange.id;
             Command.ExecuteNonQuery();
             conn.Close();
 
@@ -88,11 +110,13 @@ public class UserController : ControllerBase
     public IActionResult DisableUser([FromBody] int id)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sql = "UPDATE Users SET IsDisabled=1 WHERE ID="+Convert.ToString(id);
-        //TODO Authentication + Prevention of SQL injection
+        var sql = "UPDATE Users SET IsDisabled=1 WHERE ID=@ID;";
+        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@ID", System.Data.SqlDbType.Int);
+        Command.Parameters["@ID"].Value = id;
         Command.ExecuteNonQuery();
         conn.Close();
         
@@ -184,11 +208,41 @@ public class UserController : ControllerBase
         return PasswordBasedKeyDerivationAlgorithm.Argon2id(argon2Parameters);
     }
 
+    private static Boolean checkPWRequriements(String PotentialPassword)
+    {
+        int requirements = 0;
+        string alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        string  RgxUrl = "[^a-zA-Z0-9]";
+        if (PotentialPassword.Contains(alpha))
+        {
+            requirements++;
+        }
+        if (PotentialPassword.Contains(alpha.ToLower()))
+        {
+            requirements++;
+        }
+        if (PotentialPassword.Contains("01234567890"))
+        {
+            requirements++;
+        }
+        if (Regex.IsMatch(PotentialPassword, RgxUrl))
+        {
+            requirements++;
+        }
+        if (requirements >= 3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
     [HttpPost("Debug")]
     public async Task<IActionResult> Debug([FromBody] int i)
     {
-        //TODO
+        //TODO Remove
         if (i == 1)
         {
             Random rnd = new Random();
@@ -226,6 +280,7 @@ public class UserController : ControllerBase
     [HttpPost("InserTestInfoUser")]
     public async Task<IActionResult> InserTestInfoUser()
     {
+        //TODO Remove
         CreateUser(new User(0, "admin", "Admin123!", "+43 858 651 5050", "admin@mail.com", true));
         CreateUser(new User(0, "michael", "Administrator1234567890!", "+43 867 5309", "michael@mail.com", true));
         CreateUser(new User(0, "laura", "admin", "+43 605 475 6968", "laura@mail.com", false));

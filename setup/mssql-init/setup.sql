@@ -49,6 +49,7 @@ CREATE TABLE Incidents (
     [Status] INT NOT NULL,
     Notes_Text NVARCHAR(MAX) NULL,
     ConclusionID INT NULL,
+    IsDisabled BIT NOT NULL DEFAULT 0,
     CONSTRAINT FK_Incidents_Owner FOREIGN KEY (OwnerID) REFERENCES Users(ID),
     CONSTRAINT FK_Incidents_Creator FOREIGN KEY (CreatorID) REFERENCES Users(ID),
     CONSTRAINT FK_Incidents_Conclusion FOREIGN KEY (ConclusionID) REFERENCES Conclusion_Definitions(Conclusion_ID)

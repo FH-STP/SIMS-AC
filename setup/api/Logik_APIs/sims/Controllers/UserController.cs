@@ -32,12 +32,23 @@ public class UserController : ControllerBase
     {
         Random rnd = new Random();
         var argon2Hasher = getArgon2idHasher();
-
-        //TODO Authentication
+        String str = "ABCDEF0123456789";
+        int size = 32;
+        String salt = "";
+        for (int i = 0; i < size; i++)
+        {
+            int x = rnd.Next(str.Length);
+            salt = salt + str[x];
+        }
+        //TODO Authentication + Password Strenght check
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var salt = Convert.ToString(rnd.Next(0, 999999999));
         var PWHash = argon2Hasher.DeriveBytes(user.Password, Convert.FromHexString(salt), 256);
-        var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin,Telephone,EMail) VALUES ('" + user.UserName + "', '" + Convert.ToHexString(PWHash) + "', '" + salt + "', " + user.isAdmin + "', " + user.Telephone +"', " + user.EMail +  ");";
+        String isAdmin = "0";
+        if (user.isAdmin)
+        {
+            isAdmin = "1";
+        }
+        var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin, Telephone,EMail) VALUES ('" + user.UserName + "', '" + Convert.ToHexString(PWHash) + "', '" + salt + "', " + isAdmin + " , '" + user.Telephone +"', '" + user.EMail +  "');";
         
         
         conn.Open();
@@ -114,16 +125,15 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("GetUserInfo/{id}")]
-    public IActionResult GetUserInfo([FromBody] int id)
+    public IActionResult GetUserInfo(int id)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, Username, EMail, Telephone FROM Users";
+        var sqlRead = "SELECT ID, Username, EMail, Telephone, IsDisabled FROM Users";
         //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
         var reader = Command.ExecuteReader();
-        conn.Close();
 
         String users = "";
         if (reader.HasRows)
@@ -132,10 +142,13 @@ public class UserController : ControllerBase
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    users = reader.GetInt32(0) + " " + reader.GetString(1) + " " + reader.GetString(2) + " " + reader.GetString(3);
+                    users = reader.GetInt32(0) + " " + reader.GetString(1) + " " + reader.GetString(2) + " " + reader.GetString(3) + " " + reader.GetBoolean(4);
                 }
             }
         }
+
+        conn.Close();
+
         return Ok(users);
     }
 
@@ -175,7 +188,7 @@ public class UserController : ControllerBase
         var argon2Parameters = new Argon2Parameters { DegreeOfParallelism = 1, MemorySize = 64 * 1024, NumberOfPasses = 5 };
         return PasswordBasedKeyDerivationAlgorithm.Argon2id(argon2Parameters);
     }
-    
+
 
     [HttpPost("Debug")]
     public async Task<IActionResult> Debug([FromBody] int i)
@@ -186,15 +199,15 @@ public class UserController : ControllerBase
             Random rnd = new Random();
             var argon2Hasher = getArgon2idHasher();
             var PWHash = argon2Hasher.DeriveBytes("pass", Convert.FromHexString("00112233445566778899AABBCCDDEEFF"), 256);
-            
+
 
             await using var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-            var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin) VALUES ('niklas" + Convert.ToString(rnd.Next(0, 9)) + "', '" + Convert.ToHexString(PWHash) + "', '" + "SALT"+ "', 1);";
+            var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin) VALUES ('niklas" + Convert.ToString(rnd.Next(0, 9)) + "', '" + Convert.ToHexString(PWHash) + "', '" + "SALT" + "', 1);";
             var sqlRead = "SELECT ID, Username, PasswordHash, PasswordSalt FROM Users";
             conn.Open();
             var Command = new SqlCommand(SQLInsert, conn);
             Command.ExecuteNonQuery();
-            
+
             Command = new SqlCommand(sqlRead, conn);
             var reader = Command.ExecuteReader();
             String Users = "";
@@ -202,7 +215,7 @@ public class UserController : ControllerBase
             {
                 while (reader.Read())
                 {
-                    Users = Users + " " + reader.GetInt32(0)+ " " + reader.GetString(1)+ " " + reader.GetString(2)+ " " + reader.GetString(3);
+                    Users = Users + " " + reader.GetInt32(0) + " " + reader.GetString(1) + " " + reader.GetString(2) + " " + reader.GetString(3);
                 }
             }
             conn.Close();
@@ -211,6 +224,18 @@ public class UserController : ControllerBase
         else
         {
             return BadRequest();
-        }        
+        }
+    }
+    
+
+    [HttpPost("InserTestInfoUser")]
+    public async Task<IActionResult> InserTestInfoUser()
+    {
+        CreateUser(new User(0, "admin", "Admin123!", "+43 858 651 5050", "admin@mail.com", true));
+        CreateUser(new User(0, "michael", "Administrator1234567890!", "+43 867 5309", "michael@mail.com", true));
+        CreateUser(new User(0, "laura", "admin", "+43 605 475 6968", "laura@mail.com", false));
+        CreateUser(new User(0, "sebastian", "htl", "+43 42 420 666", "sebastian@mail.com", false));
+        CreateUser(new User(0, "niklas", "??????", "+43 354 354 354", "niklas@mail.com", false));
+        return Ok();
     }
 }

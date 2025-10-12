@@ -10,7 +10,7 @@ namespace sims.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-[Authorize]
+//[Authorize]
 public class IncidentController : ControllerBase
 {
 
@@ -18,7 +18,7 @@ public class IncidentController : ControllerBase
     public IActionResult GetIncidentInfo([FromBody] int id)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time FROM Users";
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Users";
         //TODO Authentication
 
         conn.Open();
@@ -33,7 +33,7 @@ public class IncidentController : ControllerBase
                 if (reader.GetInt32(0) == id)
                 {
                     return Ok(new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
-                  reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8)));
+                  reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8),reader.GetBoolean(9)));
                 }
             }
         }
@@ -47,7 +47,7 @@ public class IncidentController : ControllerBase
         int iterator = 0;
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time FROM Users ORDER BY id DESC LIMIT 25";
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Users WHERE IsDisabled=0 ORDER BY id DESC LIMIT 25";
         //TODO Authentication
 
         conn.Open();
@@ -60,7 +60,7 @@ public class IncidentController : ControllerBase
             while (reader.Read())
             {
                 incidentList[iterator] = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
-                    reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8));
+                    reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8),reader.GetBoolean(9));
                 iterator++;
             }
         }
@@ -72,8 +72,13 @@ public class IncidentController : ControllerBase
     {
         //TODO Authentication + SQL-Injection Prevention
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID) VALUES ('" +
-        incident.Owner + "', '" + incident.Creator + "', " + incident.APIText + "', " + Convert.ToString(DateTime.Now) +"', " + incident.Severity + "', '" + incident.Status + "', " + incident.NotesText + "', " + incident.Conclusion + ");";
+        String IsDisabled = "0";
+        if (incident.IsDisabled)
+        {
+            IsDisabled = "1";
+        }
+        var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID,IsDisabled) VALUES ('" +
+        incident.Owner + "', '" + incident.Creator + "', '" + incident.APIText + "', '" + Convert.ToString(DateTime.Now) +"', '" + incident.Severity + "', '" + incident.Status + "', '" + incident.NotesText + "', '" + incident.Conclusion + "', " + IsDisabled + ");";
         
         
         conn.Open();
@@ -119,4 +124,15 @@ public class IncidentController : ControllerBase
         return Ok();
     }
 
+
+    [HttpPost("InserTestInfoIncidents")]
+    public async Task<IActionResult> InserTestInfoUser()
+    {
+        for(int iterator=0; iterator < 30; iterator++)
+        {
+            CreateIncident(new Incident(0, 0, 0, "Danger Shai Hulud", "Shai Hulud has infected Host X", "", 5, 0, 0, DateTime.Now, false));
+            CreateIncident(new Incident(0, 0, 0, "Scan", "Host X was Scanned", "", 3, 0, 0, DateTime.Now, false));
+        }
+        return Ok();
+    }
 }

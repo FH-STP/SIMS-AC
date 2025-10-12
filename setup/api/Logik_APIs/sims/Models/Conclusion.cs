@@ -4,17 +4,17 @@ namespace sims.Models
     public class Conclusion
     {
         
-        public Conclusion(int conclusionID, string text, bool truePositiv, bool informational)
+        public Conclusion(int conclusionID, string text, bool isTruePositive, bool isInformational)
         {
             ConclusionID = conclusionID;
             Text = text;
-            TruePositiv = truePositiv;
-            Informational = informational;
+            IsTruePositive = isTruePositive;
+            IsInformational = isInformational;
         }
 
         public int ConclusionID { get; set; }
         public string Text { get; set; }
-        public bool TruePositiv { get; set; }
-        public bool Informational { get; set; }
+        public bool IsTruePositive { get; set; }
+        public bool IsInformational { get; set; }
     }
 }

@@ -15,16 +15,15 @@ public class IncidentController : ControllerBase
 {
 
     [HttpGet("GetIncidentInfo/{id}")]
-    public IActionResult GetIncidentInfo([FromBody] int id)
+    public IActionResult GetIncidentInfo(int id)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Users";
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents;";
         //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
         var reader = Command.ExecuteReader();
-        conn.Close();
 
         if (reader.HasRows)
         {
@@ -32,11 +31,16 @@ public class IncidentController : ControllerBase
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    return Ok(new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
-                  reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8),reader.GetBoolean(9)));
+                    Incident Result = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
+                  reader.GetString(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
+                    conn.Close();
+                    return Ok(Result);
                 }
             }
         }
+
+        conn.Close();
+                
         return BadRequest();
     }
 
@@ -47,7 +51,7 @@ public class IncidentController : ControllerBase
         int iterator = 0;
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Users WHERE IsDisabled=0 ORDER BY id DESC LIMIT 25";
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC LIMIT 25;";
         //TODO Authentication
 
         conn.Open();
@@ -60,7 +64,7 @@ public class IncidentController : ControllerBase
             while (reader.Read())
             {
                 incidentList[iterator] = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
-                    reader.GetString(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDateTime(8),reader.GetBoolean(9));
+                  reader.GetString(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
                 iterator++;
             }
         }
@@ -78,7 +82,7 @@ public class IncidentController : ControllerBase
             IsDisabled = "1";
         }
         var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID,IsDisabled) VALUES ('" +
-        incident.Owner + "', '" + incident.Creator + "', '" + incident.APIText + "', '" + Convert.ToString(DateTime.Now) +"', '" + incident.Severity + "', '" + incident.Status + "', '" + incident.NotesText + "', '" + incident.Conclusion + "', " + IsDisabled + ");";
+        incident.Owner + "', '" + incident.Creator + "', '" + incident.Title + "', '" + incident.APIText + "', '" + Convert.ToString(DateTime.Now) +"', '" + incident.Severity + "', '" + incident.Status + "', '" + incident.NotesText + "', '" + incident.Conclusion + "', " + IsDisabled + ");";
         
         
         conn.Open();
@@ -128,11 +132,12 @@ public class IncidentController : ControllerBase
     [HttpPost("InserTestInfoIncidents")]
     public async Task<IActionResult> InserTestInfoUser()
     {
-        for(int iterator=0; iterator < 30; iterator++)
+        for (int iterator = 0; iterator < 30; iterator++)
         {
-            CreateIncident(new Incident(0, 0, 0, "Danger Shai Hulud", "Shai Hulud has infected Host X", "", 5, 0, 0, DateTime.Now, false));
-            CreateIncident(new Incident(0, 0, 0, "Scan", "Host X was Scanned", "", 3, 0, 0, DateTime.Now, false));
+            CreateIncident(new Incident(0, 1, 1, "Danger Shai Hulud", "{\"text" + "\": \"Shai Hulud has infected Host X\"}", "", 5, 1, 0, DateTime.Now, false));
+            CreateIncident(new Incident(0, 1, 1, "Scan", "{\"text" + "\": \"Host X was Scanned\"}", "", 3, 1, 0, DateTime.Now, false));
         }
         return Ok();
     }
 }
+

@@ -37,6 +37,8 @@ public class Program
         });
         builder.Services.AddAuthorization();
 
+        builder.Services.AddScoped<sims.Services.JwtService>();
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.

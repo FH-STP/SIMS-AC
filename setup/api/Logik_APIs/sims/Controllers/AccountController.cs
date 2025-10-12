@@ -26,12 +26,40 @@ public class AccountController : ControllerBase
     [HttpPost("Login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-        var Tesult = await JwtService.Authenticate(loginRequest);
-        if(Tesult is null)
+
+        UserController myUsers = new UserController();
+        int UserID = 0;
+
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sqlRead = "SELECT ID FROM Users WHERE Username='"+loginRequest.UserName+"';";
+
+        // Get ID
+        conn.Open();
+        var Command = new SqlCommand(sqlRead, conn);
+        var reader = Command.ExecuteReader();
+        if (reader.HasRows)
+        {
+            while (reader.Read())
+            {
+                UserID = reader.GetInt32(0);
+            }
+        }
+        conn.Close();
+        loginRequest.ID=UserID;
+
+        // Verity PW
+        Boolean correctPw = UserController.verifyPW(UserID,loginRequest.Password);
+        if (!correctPw)
         {
             return Unauthorized();
         }
+        
+        var Tesult = await JwtService.Authenticate(loginRequest);
+        if(Tesult is null)
+        {
+            return BadRequest();
+        }
 
-        return BadRequest();
+        return Ok(Tesult);
     }
 }

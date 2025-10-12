@@ -51,23 +51,25 @@ public class IncidentController : ControllerBase
         int iterator = 0;
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC LIMIT 25;";
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC;";
         //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
         var reader = Command.ExecuteReader();
-        conn.Close();
 
         if (reader.HasRows)
         {
-            while (reader.Read())
+            while (reader.Read() && (iterator < 25))
             {
                 incidentList[iterator] = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
                   reader.GetString(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
                 iterator++;
             }
         }
+        
+        conn.Close();
+
         return Ok(incidentList);
     }
 

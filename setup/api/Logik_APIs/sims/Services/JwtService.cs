@@ -23,7 +23,6 @@ namespace sims.Services
             {
                 return null;
             }
-            //TODO authenticate
 
             var Issuer = Configuration["JwtConfig:Issuer"];
             var Audience = Configuration["JwtConfig:Audience"];
@@ -35,7 +34,7 @@ namespace sims.Services
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Name, request.UserName)
+                    new Claim(JwtRegisteredClaimNames.Name, request.ID.ToString())
                 }),
                 Expires = TokenExpiryTimeStamp,
                 Issuer = Issuer,
@@ -50,6 +49,7 @@ namespace sims.Services
 
             return new LoginResponse
             {
+                ID=request.ID,
                 UserName = request.UserName,
                 AccessToken = AccessToken,
                 ExpiresIn = (int)TokenExpiryTimeStamp.Subtract(DateTime.UtcNow).TotalSeconds

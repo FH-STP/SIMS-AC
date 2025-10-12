@@ -17,15 +17,6 @@ namespace sims.Controllers;
 //[Authorize]
 public class UserController : ControllerBase
 {
-
-    /*private readonly JwtService JwtService;
-
-    public UserController(JwtService jwtService)
-    {
-        JwtService = jwtService;
-    }*/
-
-     
     [AllowAnonymous]
     [HttpPost(Name = "CreateUser")]
     public IActionResult CreateUser([FromBody] User user)
@@ -59,20 +50,6 @@ public class UserController : ControllerBase
         return Ok();
     }
 
-    [AllowAnonymous]
-    [HttpPost("Login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
-    {
-        //TODO Move Authentication
-        
-        /*var Tesult = await JwtService.Authenticate(loginRequest);
-        if(Tesult is null)
-        {
-            return Unauthorized();
-        }*/
-
-        return BadRequest();
-    }
 
     [HttpPut(Name = "ChangePassword")]
     public IActionResult ChangePassword([FromBody] PasswordChange passwordChange)
@@ -127,6 +104,22 @@ public class UserController : ControllerBase
     [HttpGet("GetUserInfo/{id}")]
     public IActionResult GetUserInfo(int id)
     {
+
+        //TODO Authentication
+        User? user = GetUserInfoFromDB(id);
+
+        if (user == null)
+        {
+            return BadRequest();
+        }
+        else
+        {
+            return Ok(user);
+        }
+    }
+
+    public static User? GetUserInfoFromDB(int id)
+    {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT ID, Username, EMail, Telephone, IsDisabled FROM Users";
         //TODO Authentication
@@ -135,24 +128,24 @@ public class UserController : ControllerBase
         var Command = new SqlCommand(sqlRead, conn);
         var reader = Command.ExecuteReader();
 
-        String users = "";
+        User? users = null;
         if (reader.HasRows)
         {
             while (reader.Read())
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    users = reader.GetInt32(0) + " " + reader.GetString(1) + " " + reader.GetString(2) + " " + reader.GetString(3) + " " + reader.GetBoolean(4);
+                    users = new User(reader.GetInt32(0), reader.GetString(1), "Wurde aus Datenschutzgründen entfernt!", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
                 }
             }
         }
 
         conn.Close();
 
-        return Ok(users);
+        return users;
     }
 
-    private Boolean verifyPW(int id, string password)
+    public static Boolean verifyPW(int id, string password)
     {
         Random rnd = new Random();
         var argon2Hasher = getArgon2idHasher();
@@ -164,7 +157,6 @@ public class UserController : ControllerBase
         conn.Open();
         var CommandReader = new SqlCommand(sqlRead, conn);
         var reader = CommandReader.ExecuteReader();
-        conn.Close();
 
         if (reader.HasRows)
         {
@@ -180,10 +172,13 @@ public class UserController : ControllerBase
                 }
             }
         }
+
+        conn.Close();
+                
         return isPWCorrect;
     }
     
-    private Argon2id getArgon2idHasher()
+    private static Argon2id getArgon2idHasher()
     {
         var argon2Parameters = new Argon2Parameters { DegreeOfParallelism = 1, MemorySize = 64 * 1024, NumberOfPasses = 5 };
         return PasswordBasedKeyDerivationAlgorithm.Argon2id(argon2Parameters);

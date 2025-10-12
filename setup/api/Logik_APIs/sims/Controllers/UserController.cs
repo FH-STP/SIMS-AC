@@ -14,7 +14,7 @@ namespace sims.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-//[Authorize]
+[Authorize]
 public class UserController : ControllerBase
 {
     [AllowAnonymous]
@@ -135,7 +135,7 @@ public class UserController : ControllerBase
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    users = new User(reader.GetInt32(0), reader.GetString(1), "Wurde aus Datenschutzgründen entfernt!", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
+                    users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
                 }
             }
         }
@@ -222,7 +222,7 @@ public class UserController : ControllerBase
         }
     }
     
-
+    [AllowAnonymous]
     [HttpPost("InserTestInfoUser")]
     public async Task<IActionResult> InserTestInfoUser()
     {

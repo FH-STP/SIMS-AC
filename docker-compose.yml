@@ -4,22 +4,28 @@ services:
     build: ./setup/frontend
     ports:
       - "8080:80"
-    restart: unless-stopped # <-- Ensures the container restarts automatically
+    restart: unless-stopped
     networks:
       - sims-net
 
-  # 2. API (The Backend Logic)
+  # 2. API (With corrected build context)
   api:
     build: ./setup/api
     ports:
-      - "5000:80"
+      # Maps port 5321 on your computer to port 5321 inside the container.
+      - "5321:5321"
     environment:
-      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True
+      # This new line tells the .NET application to listen on port 5321 inside the container.
+      - ASPNETCORE_URLS=http://+:5321
+      # Added 'Encrypt=False' to the connection string to resolve connection issues.
+      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False
       - MONGO_CONNECTION_STRING=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo-db:27017/sims
     depends_on:
-      - sql-db
-      - mongo-db
-    restart: unless-stopped # <-- Ensures the container restarts automatically
+      sql-db:
+        condition: service_healthy
+      mongo-db:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - sims-net
 
@@ -30,13 +36,19 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=${SQL_PASSWORD}
+      - MSSQL_CPU_COUNT=1
     volumes:
       - ./data/sql:/var/opt/mssql
     ports:
       - "1433:1433"
-    restart: unless-stopped # <-- Ensures the container restarts automatically
+    restart: unless-stopped
     networks:
       - sims-net
+    healthcheck:
+      test: ["CMD-SHELL", "sqlcmd -S localhost -U sa -P \"$${SA_PASSWORD}\" -C -Q 'SELECT 1'"]
+      interval: 10s
+      retries: 10
+      timeout: 5s
 
   # 4. MongoDB (for Comments, Pictures)
   mongo-db:
@@ -49,9 +61,14 @@ services:
       - ./setup/mongo-init:/docker-entrypoint-initdb.d
     ports:
       - "27017:27017"
-    restart: unless-stopped # <-- Ensures the container restarts automatically
+    restart: unless-stopped
     networks:
       - sims-net
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' -u \"$${MONGO_USER}\" -p \"$${MONGO_PASSWORD}\" --quiet"]
+      interval: 10s
+      retries: 10
+      timeout: 5s
 
   # 5. Grafana (for Data Visualization)
   grafana:
@@ -61,7 +78,10 @@ services:
     user: "${UID}:${GID}"
     volumes:
       - ./data/grafana:/var/lib/grafana
-    restart: unless-stopped # <-- Ensures the container restarts automatically
+      - ./setup/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./setup/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./setup/grafana/dashboards:/var/lib/grafana/dashboards
+    restart: unless-stopped
     networks:
       - sims-net
 
@@ -73,7 +93,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/portainer:/data
-    restart: unless-stopped # <-- Ensures the container restarts automatically
+    restart: unless-stopped
     networks:
       - sims-net
 

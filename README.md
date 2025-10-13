@@ -59,14 +59,17 @@ The first time you run the script, Docker will download and build all the necess
 
 Once the setup is complete, all services will be running. You can access them at the following URLs:
 
-| Service   | Purpose                         | Access URL                        |
-| :-------- | :------------------------------ | :-------------------------------- |
-| Frontend  | The main web user interface.    | `http://localhost:8080`           |
-| API       | The backend logic service.      | `http://localhost:5000`           |
-| Grafana   | For data visualization.         | `http://localhost:3000`           |
-| Portainer | For managing Docker containers. | `https://localhost:9443`          |
-| SQL-DB    | MS SQL database.                | `localhost,1433` (via clients)    |
-| MongoDB   | NoSQL database.                 | `localhost:27017` (via clients)   |
+| Service   | Purpose                         | Access URL                        | Default Credentials |
+| :-------- | :------------------------------ | :-------------------------------- | - |
+| Frontend  | The main web user interface.    | `http://localhost:8080`           | - |
+| API       | The backend logic service.      | `http://localhost:5000`           | - |
+| Grafana   | For data visualization.         | `http://localhost:3000`           | admin / admin123! |
+| Portainer | For managing Docker containers. | `https://localhost:9443`          | Set on first visit! |
+| n8n 			| Workflow automation. 						| `https://localhost:5678`          | admin / YourN8nPassword! |
+| SQL-DB    | MS SQL database.                | `localhost,1433` (via clients)    | sa / YourStrong!SQLPa55word |
+| MongoDB   | NoSQL database.                 | `localhost:27017` (via clients)   | simsadmin / YourStrong!MongoPa55word |
+
+The Passwords can be easily changed by modifying the according setup script!
 
 ### How to Reset the Environment
 

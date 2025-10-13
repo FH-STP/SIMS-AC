@@ -95,11 +95,15 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - SA_PASSWORD=${SQL_PASSWORD} # Passes the password to the datasource config
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     volumes:
+      # Persistent storage for Grafana's internal database
       - ./data/grafana:/var/lib/grafana
+      # Mount the provisioning files for datasources and dashboards
       - ./setup/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./setup/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      # Mount the actual dashboard JSON file
       - ./setup/grafana/dashboards:/var/lib/grafana/dashboards
     restart: unless-stopped
     networks:

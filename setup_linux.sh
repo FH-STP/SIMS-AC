@@ -24,6 +24,7 @@ cat > .env << EOL
 SQL_PASSWORD=YourStrong!SQLPa55word
 MONGO_USER=simsadmin
 MONGO_PASSWORD=YourStrong!MongoPa55word
+GRAFANA_ADMIN_PASSWORD=admin123!
 UID=$(id -u)
 GID=$(id -g)
 EOL

@@ -40,4 +40,3 @@ fi
 # that will keep the container running.
 wait $SQL_SERVER_PID
     
-

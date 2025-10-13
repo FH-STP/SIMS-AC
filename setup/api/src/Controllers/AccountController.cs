@@ -76,7 +76,7 @@ public class AccountController : ControllerBase
         {
             return Unauthorized();
         }
-        
+
         var Tesult = await JwtService.Authenticate(loginRequest, Role);
         if(Tesult is null)
         {

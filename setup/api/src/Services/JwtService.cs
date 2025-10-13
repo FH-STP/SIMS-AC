@@ -35,6 +35,7 @@ namespace sims.Services
                 Subject = new ClaimsIdentity(new[]
                 {
                     new Claim(JwtRegisteredClaimNames.Name, request.UserName),
+                    new Claim(JwtRegisteredClaimNames.UniqueName, request.ID.ToString()),
                     new Claim(ClaimTypes.Role, userOrAdmin)
                 }),
                 Expires = TokenExpiryTimeStamp,

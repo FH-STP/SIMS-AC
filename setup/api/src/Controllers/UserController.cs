@@ -11,6 +11,8 @@ using NSec.Cryptography;
 using System.Text.RegularExpressions;
 using MongoDB.Driver;
 using MongoDB.Bson;
+using MongoDB.Driver.GridFS;
+
 
 namespace sims.Controllers;
 
@@ -20,7 +22,7 @@ namespace sims.Controllers;
 public class UserController : ControllerBase
 {
 
-    [AllowAnonymous]//[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     [HttpPost(Name = "CreateUser")]
     public IActionResult CreateUser([FromBody] User user)
     {
@@ -145,44 +147,108 @@ public class UserController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
-    [HttpGet("UploadPicture/{id}")]
-    public IActionResult UploadPicture(int id)
+    [Authorize]
+    [HttpPost("UploadPicture")]
+    public async Task<IActionResult> UploadPicture(IFormFile file)
     {
         var client = new MongoClient(KonstantenSIMS.uri);
-        /*if (!Request.Form.Files.Any()){
-            return Ok();
+        var database = client.GetDatabase("sims");
+
+        if (!(CollectionExists(database, "profilePic")))
+        {
+            await database.CreateCollectionAsync("profilePic");
+
+        }
+        var gridFSBucket = new GridFSBucket(database);
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest("No file uploaded.");
         }
 
-        foreach (IFormFile file in Request.Form.Files)
+        // Get ID
+        int UserIDs = 0;
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sqlRead = "SELECT ID, Is_Admin, IsDisabled FROM Users WHERE Username= @Name;";
+        conn.Open();
+        var Command = new SqlCommand(sqlRead, conn);
+        Command.Parameters.Add("@Name", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@Name"].Value = User?.FindFirst("Name")?.Value;
+        var reader = Command.ExecuteReader();
+        if (reader.HasRows)
         {
+            while (reader.Read())
+            {
+                UserIDs = reader.GetInt32(0);
+            }
+        }
+        conn.Close();
 
-        }*/
-        List<string> databaseNames = client.ListDatabaseNames().ToList();
-        /*String dbs = "";
-        foreach (String name in databaseNames)
+        using (var stream = file.OpenReadStream())
         {
-            dbs = dbs + name;
-        }*/
+            var fileId = await gridFSBucket.UploadFromStreamAsync(file.FileName, stream);
 
-        return Ok();
+            var fileInfo = new
+            {
+                UserId = UserIDs,
+                FileName = file.FileName,
+                FileId = fileId.ToString(),
+                UploadDate = DateTime.UtcNow
+            };
+
+            var fileCollection = database.GetCollection<BsonDocument>("profilePic");
+            await fileCollection.InsertOneAsync(fileInfo.ToBsonDocument());
+
+            return Ok(fileId);
+        }
+    }
+    
+    public static bool CollectionExists(IMongoDatabase database, string collectionName)
+    {
+        var filter = new BsonDocument("name", collectionName);
+        var options = new ListCollectionNamesOptions { Filter = filter };
+
+        return database.ListCollectionNames(options).Any();
     }
 
     [AllowAnonymous]
-    [HttpGet("GetUserPic/{id}")]
-    public IActionResult GetUserPic(int id)
+    [HttpGet("GetUserPic/{fileId}")]
+    public async Task<IActionResult> GetUserPic(string fileId)
     {
 
-        //TODO Authentication
-        User? user = GetUserInfoFromDB(id);
-
-        if (user == null)
+        // Get ID
+        int UserIDs = 0;
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sqlRead = "SELECT ID, Is_Admin, IsDisabled FROM Users WHERE Username= @Name;";
+        conn.Open();
+        var Command = new SqlCommand(sqlRead, conn);
+        Command.Parameters.Add("@Name", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@Name"].Value = User?.FindFirst("Name")?.Value;
+        var reader = Command.ExecuteReader();
+        if (reader.HasRows)
         {
-            return BadRequest();
+            while (reader.Read())
+            {
+                UserIDs = reader.GetInt32(0);
+            }
         }
-        else
+        conn.Close();
+
+
+        
+        var client = new MongoClient(KonstantenSIMS.uri);
+        var database = client.GetDatabase("sims"); // Ersetze durch deinen Datenbanknamen
+        var gridFSBucket = new GridFSBucket(database);
+
+        try
         {
-            return Ok(user);
+            // Holen der Datei aus GridFS
+            var fileStream = gridFSBucket.OpenDownloadStreamAsync(new ObjectId(fileId));
+            
+            return File(await fileStream, "application/octet-stream", fileId); // Oder ein entsprechender MIME-Typ, wenn bekannt
+        }
+        catch (Exception ex)
+        {
+            return NotFound($"File not found: {ex.Message}");
         }
     }
 
@@ -311,11 +377,11 @@ public class UserController : ControllerBase
         return requirements;
     }*/
 
-    [AllowAnonymous]
+    /*[AllowAnonymous]
     [HttpPost("Debug")]
     public async Task<IActionResult> Debug([FromBody] String tset)
     {
-        /*//TODO Remove
+        //TODO Remove
         if (i == 1)
         {
             Random rnd = new Random();
@@ -346,7 +412,7 @@ public class UserController : ControllerBase
         else
         {
             return BadRequest();
-        }*/
+        }
 
         return BadRequest(checkPWRequriements(tset));
     }
@@ -362,5 +428,5 @@ public class UserController : ControllerBase
         CreateUser(new User(0, "sebastian", "htl", "+43 42 420 666", "sebastian@mail.com", false));
         CreateUser(new User(0, "niklas", "??????", "+43 354 354 354", "niklas@mail.com", false));
         return Ok();
-    }
+    }*/
 }

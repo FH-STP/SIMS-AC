@@ -68,97 +68,76 @@ CREATE TABLE Incident_Links (
 );
 
 -- =================================================================
--- Insert Default Users
+-- Insert Default Admin User
 -- =================================================================
--- Note: These are pre-computed Argon2id hashes for testing purposes
--- admin: password = 'admin123'
--- user: password = 'user123'
--- security: password = 'security123'
+-- This ensures the 'admin' user with ID=1 always exists.
 
--- Check if default users already exist, insert if not
 IF NOT EXISTS (SELECT * FROM Users WHERE Username = 'admin')
 BEGIN
-    INSERT INTO Users (Username, PasswordHash, PasswordSalt, EMail, Telephone, Is_Admin, IsDisabled)
-    VALUES (
-        'admin',
-        'E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855', -- Simplified hash for 'admin123'
-        'ABCDEF0123456789ABCDEF0123456789',
-        'admin@sims-ac.local',
-        '+43 123 456 789',
-        1,
-        0
-    );
-END;
+    -- Temporarily allow explicit insertion into the IDENTITY column
+    SET IDENTITY_INSERT Users ON;
 
-IF NOT EXISTS (SELECT * FROM Users WHERE Username = 'user')
-BEGIN
-    INSERT INTO Users (Username, PasswordHash, PasswordSalt, EMail, Telephone, Is_Admin, IsDisabled)
+    INSERT INTO Users (ID, Username, PasswordHash, PasswordSalt, EMail, Telephone, Is_Admin, IsDisabled)
     VALUES (
-        'user',
-        'F7CE2B3E6C0F1A86E0B5F4B3E1A2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0', -- Simplified hash for 'user123'
-        'FEDCBA9876543210FEDCBA9876543210',
-        'user@sims-ac.local',
-        '+43 987 654 321',
-        0,
-        0
+        1,                         -- Explicitly set ID
+        'admin',                   -- Username
+        '465C203B938A7906AF58B35D580B45E9E73762E2FEDCD614961B967F010CD1FA4D0F4DCD25E81AC45BAB235F672DFD412645895F1979D2B8CD5D0E0B05B0B43FAD4F93BAD5A0AF224F97CD4CF89E7846F172E4859296DC53D2A51489EE58E40A886556E669452DE18F0E356D3565B5F36582F6453BA78D4A58419051AC02CD63BCB63C9BCA8E473D19F7E777770DE0F5719F8EA5D5C4B97FFF874A97800A01E8A5AE14F9042416FCBBFF00E5AD3B2A3FA33CC17643DA457A4AFCEEBAD1B92955F8C9BCC67BCDB4DB5CB3833004593F8F8649377F7218D987D0589DB4F5CE5A61D972F7D06C9B785B99D1F6DBEE2E0BE16B6F2101B294AE741F942CA79402D770', -- PasswordHash
+        'AB811831781EDC90A6E31A6B85A29A2F', -- PasswordSalt
+        'placeholder@test.at',     -- Email
+        '12345678',                -- Telephone
+        1,                         -- Is_Admin = true
+        0                          -- IsDisabled = false
     );
-END;
 
-IF NOT EXISTS (SELECT * FROM Users WHERE Username = 'security')
-BEGIN
-    INSERT INTO Users (Username, PasswordHash, PasswordSalt, EMail, Telephone, Is_Admin, IsDisabled)
-    VALUES (
-        'security',
-        'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2', -- Simplified hash for 'security123'
-        '0123456789ABCDEF0123456789ABCDEF',
-        'security@sims-ac.local',
-        '+43 555 123 456',
-        0,
-        0
-    );
+    -- Disable explicit insertion into the IDENTITY column
+    SET IDENTITY_INSERT Users OFF;
 END;
+GO
 
 -- =================================================================
--- Insert Sample Incidents (for testing)
+-- Insert Default Conclusion Definitions
 -- =================================================================
-IF NOT EXISTS (SELECT * FROM Incidents WHERE Title = 'Sicherheitslücke im Webserver')
+PRINT 'Populating Conclusion Definitions...';
+
+-- Clear existing definitions to ensure a clean slate, then insert all.
+IF EXISTS (SELECT * FROM Conclusion_Definitions)
 BEGIN
-    INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text, Severity, [Status], Notes_Text)
-    VALUES (
-        1, -- admin as owner
-        2, -- user as creator
-        'Sicherheitslücke im Webserver',
-        '{"type": "security_vulnerability", "severity": "high", "affected_system": "webserver", "description": "Kritische Sicherheitslücke in Apache entdeckt"}',
-        3, -- High severity
-        1, -- In progress
-        'Sofortige Patching-Maßnahmen eingeleitet. System wird überwacht.'
-    );
+    -- If you want to keep existing ones and only add new, remove this TRUNCATE line.
+    TRUNCATE TABLE Conclusion_Definitions;
 END;
 
-IF NOT EXISTS (SELECT * FROM Incidents WHERE Title = 'Verdächtige Netzwerkaktivität')
-BEGIN
-    INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text, Severity, [Status], Notes_Text)
-    VALUES (
-        1, -- admin as owner
-        3, -- security as creator
-        'Verdächtige Netzwerkaktivität',
-        '{"type": "network_anomaly", "severity": "medium", "source_ip": "192.168.1.100", "description": "Ungewöhnliche Netzwerkaktivität festgestellt"}',
-        2, -- Medium severity
-        0, -- Open
-        'Netzwerk-Logs werden analysiert. Weitere Überwachung erforderlich.'
-    );
-END;
+INSERT INTO Conclusion_Definitions ([Text], IsTruePositive, IsInformational) VALUES
+('System - Empty', 0, 0),
+('False Positiv', 0, 0),
+('False Positiv - Info', 0, 1),
+('True Positiv - Scan', 1, 1),
+('True Positiv - Info', 1, 1),
+('True Positiv - Malware', 1, 0),
+('True Positive - System Patched and Secured', 1, 0),
+('True Positive - User Account Compromised and Reset', 1, 0),
+('False Positive - Activity Confirmed as Normal', 0, 0),
+('Informational - Logged for Threat Intelligence', 0, 1);
+GO
 
-IF NOT EXISTS (SELECT * FROM Incidents WHERE Title = 'Malware-Fund auf Arbeitsplatz')
+-- =================================================================
+-- Insert Sample Incidents
+-- =================================================================
+-- Severity: 1=Low, 2=Medium, 3=High, 4=Critical
+-- Status: 1=New, 2=In Progress, 3=Closed
+PRINT 'Populating Sample Incidents...';
+
+IF NOT EXISTS (SELECT * FROM Incidents)
 BEGIN
-    INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text, Severity, [Status], Notes_Text)
-    VALUES (
-        3, -- security as owner
-        1, -- admin as creator
-        'Malware-Fund auf Arbeitsplatz',
-        '{"type": "malware_detected", "severity": "critical", "affected_host": "PC-WS-05", "description": "Trojaner auf Arbeitsplatz-PC entdeckt"}',
-        4, -- Critical severity
-        2, -- Resolved
-        'System isoliert und bereinigt. Antivirus-Definitionen aktualisiert.'
-    );
+    -- Incident 1: Critical, New
+    INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text, Creation_Time, Severity, [Status], Notes_Text, ConclusionID, IsDisabled)
+    VALUES (1, 1, 'Malware Detected on ws-01', '{"hostname": "ws-01", "malware_signature": "Trojan.GenericKD.123"}', DATEADD(day, -1, GETDATE()), 4, 1, 'Initial alert from EDR system.', NULL, 0);
+
+    -- Incident 2: High, In Progress
+    INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text, Creation_Time, Severity, [Status], Notes_Text, ConclusionID, IsDisabled)
+    VALUES (1, 1, 'Suspicious Login from Unusual IP', '{"source_ip": "198.51.100.50"}', DATEADD(hour, -5, GETDATE()), 3, 2, 'User has been contacted, awaiting response.', NULL, 0);
+
+    -- Incident 3: Medium, Closed (False Positive)
+    INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text, Creation_Time, Severity, [Status], Notes_Text, ConclusionID, IsDisabled)
+    VALUES (1, 1, 'High CPU on srv-db-01', NULL, DATEADD(day, -3, GETDATE()), 2, 3, 'Correlated with scheduled maintenance window. Confirmed as normal activity.', 3, 0);
 END;
+GO

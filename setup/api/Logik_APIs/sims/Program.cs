@@ -58,7 +58,11 @@ public class Program
                 ValidateIssuerSigningKey = true
             };
         });
-        builder.Services.AddAuthorization();
+        builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
+        options.AddPolicy("UserPolicy", policy => policy.RequireRole("User"));
+    });
 
         builder.Services.AddScoped<sims.Services.JwtService>();
 

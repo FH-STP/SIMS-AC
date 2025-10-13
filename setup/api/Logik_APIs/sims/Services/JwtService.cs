@@ -17,7 +17,7 @@ namespace sims.Services
 
         private readonly IConfiguration Configuration;
 
-        public async Task<LoginResponse?> Authenticate(LoginRequest request)
+        public async Task<LoginResponse?> Authenticate(LoginRequest request, String userOrAdmin)
         {
             if (string.IsNullOrEmpty(request.UserName) || string.IsNullOrEmpty(request.UserName) || (request.ID==null))
             {
@@ -34,7 +34,8 @@ namespace sims.Services
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Name, request.ID.ToString())
+                    new Claim(JwtRegisteredClaimNames.Name, request.UserName),
+                    new Claim(ClaimTypes.Role, userOrAdmin)
                 }),
                 Expires = TokenExpiryTimeStamp,
                 Issuer = Issuer,

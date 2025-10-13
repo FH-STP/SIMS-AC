@@ -1,18 +1,25 @@
 namespace sims.Models
 {
+    using System;
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
 
     public class User
     {
-        public User(int id, String userName, String password, String telephone, String eMail, Boolean isAdmins)
+
+        public User() { }
+
+        public User(int id1, String userName1, String password1, String telephone1, String eMail1, Boolean isAdmins1)
         {
-            Id = id;
-            UserName = userName;
-            Password = password;
-            Telephone = telephone;
-            EMail = eMail;
-            isAdmin = isAdmins;
+            this.Id = id1;
+            this.UserName = userName1;
+            this.Password = password1;
+            this.Telephone = telephone1;
+            this.EMail = eMail1;
+            this.isAdmin = isAdmins1;
 
         }
+
 
         public int Id { get; set; } // Wird überschrieben und ist in der Klasse wegen dem Return
         public string UserName { get; set; }

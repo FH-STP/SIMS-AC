@@ -9,7 +9,8 @@ using sims.Services;
 using Microsoft.AspNetCore.Authorization;
 using NSec.Cryptography;
 using System.Text.RegularExpressions;
-
+using MongoDB.Driver;
+using MongoDB.Bson;
 
 namespace sims.Controllers;
 
@@ -19,6 +20,7 @@ namespace sims.Controllers;
 public class UserController : ControllerBase
 {
 
+    [AllowAnonymous]//[Authorize(Roles = "Admin")]
     [HttpPost(Name = "CreateUser")]
     public IActionResult CreateUser([FromBody] User user)
     {
@@ -41,8 +43,8 @@ public class UserController : ControllerBase
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var PWHash = argon2Hasher.DeriveBytes(user.Password, Convert.FromHexString(salt), 256);
         var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin, Telephone,EMail) VALUES (@Username, @HASH, @SALT, @isAdmin, @Telephone, @Email);";
-        
-        
+
+
         conn.Open();
         var Command = new SqlCommand(SQLInsert, conn);
         Command.Parameters.Add("@Username", System.Data.SqlDbType.VarChar);
@@ -59,7 +61,7 @@ public class UserController : ControllerBase
         Command.Parameters["@Email"].Value = user.EMail;
         Command.ExecuteNonQuery();
         conn.Close();
-            
+
         return Ok();
     }
 
@@ -84,7 +86,7 @@ public class UserController : ControllerBase
             //Update Password
             var salt = Convert.ToString(rnd.Next(0, 999999999));
             var PWHash = argon2Hasher.DeriveBytes(passwordChange.PasswordNew, Convert.FromHexString(salt), 256);
-            var sql = "UPDATE Users SET PasswordHash=@HASH, PasswordSalt=@SALT WHERE ID=@ID"; 
+            var sql = "UPDATE Users SET PasswordHash=@HASH, PasswordSalt=@SALT WHERE ID=@ID";
 
 
             conn.Open();
@@ -106,6 +108,7 @@ public class UserController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete(Name = "DisableUser")]
     public IActionResult DisableUser([FromBody] int id)
     {
@@ -119,7 +122,7 @@ public class UserController : ControllerBase
         Command.Parameters["@ID"].Value = id;
         Command.ExecuteNonQuery();
         conn.Close();
-        
+
         //return BadRequest();
         return Accepted();
         //return NoContent();
@@ -127,6 +130,47 @@ public class UserController : ControllerBase
 
     [HttpGet("GetUserInfo/{id}")]
     public IActionResult GetUserInfo(int id)
+    {
+
+        //TODO Authentication
+        User? user = GetUserInfoFromDB(id);
+
+        if (user == null)
+        {
+            return BadRequest();
+        }
+        else
+        {
+            return Ok(user);
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpGet("UploadPicture/{id}")]
+    public IActionResult UploadPicture(int id)
+    {
+        var client = new MongoClient(KonstantenSIMS.uri);
+        /*if (!Request.Form.Files.Any()){
+            return Ok();
+        }
+
+        foreach (IFormFile file in Request.Form.Files)
+        {
+
+        }*/
+        List<string> databaseNames = client.ListDatabaseNames().ToList();
+        /*String dbs = "";
+        foreach (String name in databaseNames)
+        {
+            dbs = dbs + name;
+        }*/
+
+        return Ok();
+    }
+
+    [AllowAnonymous]
+    [HttpGet("GetUserPic/{id}")]
+    public IActionResult GetUserPic(int id)
     {
 
         //TODO Authentication
@@ -159,7 +203,7 @@ public class UserController : ControllerBase
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
+                    //users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
                 }
             }
         }
@@ -198,10 +242,10 @@ public class UserController : ControllerBase
         }
 
         conn.Close();
-                
+
         return isPWCorrect;
     }
-    
+
     private static Argon2id getArgon2idHasher()
     {
         var argon2Parameters = new Argon2Parameters { DegreeOfParallelism = 1, MemorySize = 64 * 1024, NumberOfPasses = 5 };
@@ -211,23 +255,25 @@ public class UserController : ControllerBase
     private static Boolean checkPWRequriements(String PotentialPassword)
     {
         int requirements = 0;
-        string alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        string  RgxUrl = "[^a-zA-Z0-9]";
-        if (PotentialPassword.Contains(alpha))
+        if (Regex.IsMatch(PotentialPassword, "[a-z]"))
         {
             requirements++;
         }
-        if (PotentialPassword.Contains(alpha.ToLower()))
+        if (Regex.IsMatch(PotentialPassword, "[A-Z]"))
         {
             requirements++;
         }
-        if (PotentialPassword.Contains("01234567890"))
+        if (Regex.IsMatch(PotentialPassword, "[0-9]"))
         {
             requirements++;
         }
-        if (Regex.IsMatch(PotentialPassword, RgxUrl))
+        if (Regex.IsMatch(PotentialPassword, "[^a-zA-Z0-9]"))
         {
             requirements++;
+        }
+        if (PotentialPassword.Length < 8)
+        {
+            requirements = -1;
         }
         if (requirements >= 3)
         {
@@ -239,10 +285,37 @@ public class UserController : ControllerBase
         }
     }
 
-    [HttpPost("Debug")]
-    public async Task<IActionResult> Debug([FromBody] int i)
+    /*private static int checkPWRequriementsInt(String PotentialPassword)
     {
-        //TODO Remove
+        int requirements = 0;
+        if (Regex.IsMatch(PotentialPassword, "[a-z]"))
+        {
+            requirements++;
+        }
+        if (Regex.IsMatch(PotentialPassword, "[A-Z]"))
+        {
+            requirements++;
+        }
+        if (Regex.IsMatch(PotentialPassword, "[0-9]"))
+        {
+            requirements++;
+        }
+        if (Regex.IsMatch(PotentialPassword, "[^a-zA-Z0-9]"))
+        {
+            requirements++;
+        }
+        if (PotentialPassword.Length < 8)
+        {
+            requirements = -1;
+        }
+        return requirements;
+    }*/
+
+    [AllowAnonymous]
+    [HttpPost("Debug")]
+    public async Task<IActionResult> Debug([FromBody] String tset)
+    {
+        /*//TODO Remove
         if (i == 1)
         {
             Random rnd = new Random();
@@ -273,9 +346,11 @@ public class UserController : ControllerBase
         else
         {
             return BadRequest();
-        }
+        }*/
+
+        return BadRequest(checkPWRequriements(tset));
     }
-    
+
     [AllowAnonymous]
     [HttpPost("InserTestInfoUser")]
     public async Task<IActionResult> InserTestInfoUser()

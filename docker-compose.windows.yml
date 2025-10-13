@@ -8,17 +8,23 @@ services:
     networks:
       - sims-net
 
-  # 2. API (The Backend Logic)
+  # 2. API (With corrected build context)
   api:
     build: ./setup/api
     ports:
-      - "5000:80"
+      # Maps port 5321 on your computer to port 5321 inside the container.
+      - "5321:5321"
     environment:
-      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True
+      # This new line tells the .NET application to listen on port 5321 inside the container.
+      - ASPNETCORE_URLS=http://+:5321
+      # Added 'Encrypt=False' to the connection string to resolve connection issues.
+      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False
       - MONGO_CONNECTION_STRING=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo-db:27017/sims
     depends_on:
-      - sql-db
-      - mongo-db
+      sql-db:
+        condition: service_healthy
+      mongo-db:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - sims-net
@@ -30,6 +36,7 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=${SQL_PASSWORD}
       - MSSQL_PID=Developer
+      - MSSQL_CPU_COUNT=1
     volumes:
       - sql_data:/var/opt/mssql
     ports:
@@ -37,26 +44,26 @@ services:
     restart: unless-stopped
     networks:
       - sims-net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${SA_PASSWORD}\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 15s
+      retries: 10
+      timeout: 10s
+      start_period: 60s
 
   # SQL Database initializer
   sql-init:
     image: mcr.microsoft.com/mssql-tools:latest
     depends_on:
-      - sql-db
+      sql-db:
+        condition: service_healthy
     volumes:
       - ./setup/mssql-init/setup.sql:/tmp/setup.sql:ro
     networks:
       - sims-net
     command: |
       /bin/bash -c '
-      echo "Waiting for SQL Server to be ready..."
-      sleep 30
-      echo "Checking SQL Server connection..."
-      until /opt/mssql-tools/bin/sqlcmd -S sql-db -U sa -P "${SQL_PASSWORD}" -l 30 -Q "SELECT 1" >/dev/null 2>&1; do
-        echo "SQL Server not ready, waiting..."
-        sleep 5
-      done
-      echo "SQL Server is ready, running setup script..."
+      echo "SQL Server is ready via healthcheck, running setup script..."
       /opt/mssql-tools/bin/sqlcmd -S sql-db -U sa -P "${SQL_PASSWORD}" -d master -i /tmp/setup.sql
       echo "Setup complete!"
       '
@@ -75,8 +82,14 @@ services:
     restart: unless-stopped
     networks:
       - sims-net
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' -u \"$${MONGO_USER}\" -p \"$${MONGO_PASSWORD}\" --quiet || exit 1"]
+      interval: 15s
+      retries: 10
+      timeout: 10s
+      start_period: 30s
 
-  # 5. Grafana (for Data Visualization) - Windows optimized
+  # 5. Grafana (for Data Visualization) - Windows optimized  
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -85,6 +98,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./data/grafana:/var/lib/grafana
+      - ./setup/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./setup/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./setup/grafana/dashboards:/var/lib/grafana/dashboards
     restart: unless-stopped
     networks:
       - sims-net

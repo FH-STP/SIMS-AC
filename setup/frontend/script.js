@@ -40,8 +40,6 @@ const elements = {
     // Navigation
     navButtons: document.querySelectorAll('.nav-button'),
     tabContents: document.querySelectorAll('.tab-content'),
-    grafanaFrame: document.getElementById('grafanaFrame'),
-    grafanaLoading: document.getElementById('grafanaLoading'),
     
     // Profile Elements
     profileForm: document.getElementById('profileForm'),
@@ -71,42 +69,93 @@ const elements = {
 };
 
 // API Configuration
-const API_BASE_URL = '/api';
+// Direct connection to API on port 5321 (bypass nginx proxy for now)
+const API_BASE_URL = 'http://localhost:5321';
 
 // Authentication Functions
 async function login(username, password) {
+    console.log(`🔐 Attempting login with username: ${username}`);
     try {
-        // Simulate API call to backend
-        const response = await simulateApiCall('/auth/login', {
+        // Real API call to /Account/Login endpoint
+        const response = await fetch(`${API_BASE_URL}/Account/Login`, {
             method: 'POST',
-            body: JSON.stringify({ username, password })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                UserName: username, 
+                Password: password 
+            })
         });
 
-        if (response.success) {
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Login successful:', data);
+            
+            // Store JWT token if provided (API returns AccessToken, not token)
+            if (data.AccessToken) {
+                localStorage.setItem('jwt_token', data.AccessToken);
+                console.log('🔑 JWT token stored successfully');
+            }
+            
+            // Create user object from response
+            const user = {
+                id: data.ID || 1,
+                username: data.UserName || username,
+                name: data.UserName || username,
+                email: data.email || `${username}@sims-ac.local`,
+                role: data.role || 'user',
+                phone: data.phone || null,
+                profileImage: null
+            };
+            
             appState.isLoggedIn = true;
-            appState.currentUser = response.user;
+            appState.currentUser = user;
+            
+            // Save session data
+            sessionStorage.setItem('simsAcSession', JSON.stringify({
+                isLoggedIn: true,
+                currentUser: user,
+                currentTab: 'grafana'
+            }));
+            console.log('💾 Session data saved');
+            
             showDashboard();
             return { success: true };
+        } else if (response.status === 401) {
+            console.warn('Login failed: Unauthorized');
+            return { success: false, error: 'Ungültige Anmeldedaten' };
+        } else if (response.status === 204) {
+            console.warn('Login failed: Account disabled');
+            return { success: false, error: 'Konto ist deaktiviert' };
         } else {
-            return { success: false, error: response.error };
+            const errorText = await response.text();
+            console.error('Login failed:', response.status, errorText);
+            return { success: false, error: 'Anmeldung fehlgeschlagen' };
         }
     } catch (error) {
         console.error('Login error:', error);
-        return { success: false, error: 'Verbindungsfehler' };
+        return { success: false, error: 'Verbindungsfehler zur API. Bitte versuchen Sie es später erneut.' };
     }
 }
 
 async function logout() {
     try {
-        // Simulate API call
-        await simulateApiCall('/auth/logout', { method: 'POST' });
+        // Clear JWT token and session data
+        localStorage.removeItem('jwt_token');
+        sessionStorage.removeItem('simsAcSession');
+        
+        // No specific logout API endpoint in backend, just clear local state
+        console.log('🔓 Logging out and clearing all session data...');
         
         appState.isLoggedIn = false;
         appState.currentUser = null;
         showAuthScreen();
     } catch (error) {
         console.error('Logout error:', error);
-        // Still logout locally even if API call fails
+        // Still logout locally even if anything fails
+        localStorage.removeItem('jwt_token');
+        sessionStorage.removeItem('simsAcSession');
         appState.isLoggedIn = false;
         appState.currentUser = null;
         showAuthScreen();
@@ -137,13 +186,75 @@ const mockUsers = [
     }
 ];
 
-// Simulate API calls (replace with real API calls later)
+// Real API calls to backend with JWT authentication
+async function apiCall(endpoint, options = {}) {
+    try {
+        const url = `${API_BASE_URL}${endpoint}`;
+        
+        // Add JWT token to headers if available
+        const token = localStorage.getItem('jwt_token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const config = {
+            headers,
+            ...options
+        };
+
+        console.log(`🌐 Real API Call: ${config.method || 'GET'} ${url}`);
+        
+        const response = await fetch(url, config);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.warn(`API returned ${response.status}. Response:`, errorText);
+            
+            // Handle authentication errors
+            if (response.status === 401) {
+                console.warn('Authentication failed - clearing token and redirecting to login');
+                localStorage.removeItem('jwt_token');
+                appState.isLoggedIn = false;
+                appState.currentUser = null;
+                showAuthScreen();
+            }
+            
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ API Response:', data);
+        return data;
+        
+    } catch (error) {
+        console.error('❌ API Error:', error);
+        
+        // Only use fallback for development during API development
+        // Remove this for production!
+        if (endpoint === '/auth/login' || endpoint === '/auth/register') {
+            console.log('🔄 Authentication endpoints - using mock fallback for development...');
+            return simulateApiCall(endpoint, options);
+        }
+        
+        // For other endpoints, throw the error
+        throw error;
+    }
+}
+
+// Fallback simulation for development (when API is not available)
 async function simulateApiCall(endpoint, options = {}) {
     return new Promise((resolve) => {
         setTimeout(() => {
+            console.log(`Mock API Call: ${options.method || 'GET'} ${endpoint}`);
+            
             // Simulate different responses based on endpoint
             if (endpoint === '/auth/login') {
-                const body = JSON.parse(options.body);
+                const body = JSON.parse(options.body || '{}');
                 const user = mockUsers.find(u => 
                     u.username === body.username && u.password === body.password
                 );
@@ -161,7 +272,7 @@ async function simulateApiCall(endpoint, options = {}) {
                     });
                 }
             } else if (endpoint === '/auth/register') {
-                const body = JSON.parse(options.body);
+                const body = JSON.parse(options.body || '{}');
                 
                 // Check if username or email already exists
                 const existingUser = mockUsers.find(u => 
@@ -189,7 +300,7 @@ async function simulateApiCall(endpoint, options = {}) {
                 }
             } else if (endpoint === '/user/profile') {
                 if (options.method === 'PUT') {
-                    const body = JSON.parse(options.body);
+                    const body = JSON.parse(options.body || '{}');
                     const userIndex = mockUsers.findIndex(u => u.id === appState.currentUser.id);
                     
                     if (userIndex !== -1) {
@@ -214,15 +325,42 @@ async function simulateApiCall(endpoint, options = {}) {
 // Registration Functions
 async function register(userData) {
     try {
-        const response = await simulateApiCall('/auth/register', {
+        // Real API call to /User endpoint (CreateUser)
+        const response = await fetch(`${API_BASE_URL}/User`, {
             method: 'POST',
-            body: JSON.stringify(userData)
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                UserName: userData.username,
+                Password: userData.password,
+                EMail: userData.email,
+                Telephone: userData.phone || '',
+                isAdmin: false
+            })
         });
 
-        return response;
+        if (response.ok) {
+            console.log('✅ Registration successful');
+            return { success: true, message: 'Registrierung erfolgreich!' };
+        } else if (response.status === 400) {
+            const errorText = await response.text();
+            console.warn('Registration failed:', errorText);
+            
+            // Check for specific error messages
+            if (errorText.includes('Password to weak')) {
+                return { success: false, error: 'Passwort zu schwach. Verwenden Sie ein stärkeres Passwort.' };
+            } else {
+                return { success: false, error: 'Registrierung fehlgeschlagen: ' + errorText };
+            }
+        } else {
+            const errorText = await response.text();
+            console.error('Registration failed:', response.status, errorText);
+            return { success: false, error: 'Registrierung fehlgeschlagen' };
+        }
     } catch (error) {
         console.error('Registration error:', error);
-        return { success: false, error: 'Verbindungsfehler' };
+        return { success: false, error: 'Verbindungsfehler zur API. Bitte versuchen Sie es später erneut.' };
     }
 }
 
@@ -292,10 +430,8 @@ function switchTab(tabName) {
         }
     });
 
-    // Special handling for Grafana tab
-    if (tabName === 'grafana') {
-        loadGrafana();
-    }
+    // Grafana tab now opens in new window instead of iframe
+    // No special handling needed anymore
 
     appState.currentTab = tabName;
 }
@@ -340,7 +476,7 @@ function loadUserProfile() {
 
 async function updateUserProfile(profileData) {
     try {
-        const response = await simulateApiCall('/user/profile', {
+        const response = await apiCall('/user/profile', {
             method: 'PUT',
             body: JSON.stringify(profileData)
         });
@@ -478,21 +614,9 @@ function resetSettings() {
 }
 
 function loadGrafana() {
-    // Show loading overlay
-    elements.grafanaLoading.style.display = 'flex';
-    
-    // Set up iframe load event
-    elements.grafanaFrame.onload = function() {
-        // Hide loading overlay after iframe loads
-        setTimeout(() => {
-            elements.grafanaLoading.style.display = 'none';
-        }, 1000);
-    };
-    
-    // If iframe src is not set or needs refresh
-    if (!elements.grafanaFrame.src.includes('localhost:3000')) {
-        elements.grafanaFrame.src = 'http://localhost:3000';
-    }
+    // Grafana is now opened in a new tab instead of iframe
+    // No iframe loading needed anymore
+    console.log('Grafana tab selected - use the "Grafana öffnen" button to access Grafana');
 }
 
 function toggleUserDropdown() {
@@ -814,22 +938,74 @@ window.addEventListener('beforeunload', function() {
 
 // Restore session on page load
 window.addEventListener('load', function() {
-    const savedSession = sessionStorage.getItem('simsAcSession');
-    if (savedSession) {
+    // Check for JWT token first (persistent login)
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+        console.log('🔑 JWT token found, attempting to restore session...');
+        
+        // Try to restore session data from sessionStorage
+        const savedSession = sessionStorage.getItem('simsAcSession');
+        if (savedSession) {
+            try {
+                const session = JSON.parse(savedSession);
+                if (session.isLoggedIn && session.currentUser) {
+                    console.log('✅ Session restored from storage');
+                    appState.isLoggedIn = true;
+                    appState.currentUser = session.currentUser;
+                    appState.currentTab = session.currentTab || 'grafana';
+                    showDashboard();
+                    switchTab(appState.currentTab);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error restoring session:', error);
+                sessionStorage.removeItem('simsAcSession');
+            }
+        }
+        
+        // Token exists but no session data - try to decode token for basic user info
         try {
-            const session = JSON.parse(savedSession);
-            if (session.isLoggedIn && session.currentUser) {
+            // Simple JWT decode (just to get username, not validating signature)
+            const tokenParts = token.split('.');
+            if (tokenParts.length === 3) {
+                const payload = JSON.parse(atob(tokenParts[1]));
+                console.log('🔍 Decoded JWT payload:', payload);
+                
+                // Create user from JWT claims
+                const user = {
+                    id: 1, // We don't have user ID in JWT, using default
+                    username: payload.name || payload.sub || 'user',
+                    name: payload.name || payload.sub || 'user',
+                    email: `${payload.name || 'user'}@sims-ac.local`,
+                    role: payload.role || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 'user',
+                    phone: null,
+                    profileImage: null
+                };
+                
+                // Check if token is expired
+                const now = Math.floor(Date.now() / 1000);
+                if (payload.exp && payload.exp < now) {
+                    console.warn('JWT token is expired');
+                    localStorage.removeItem('jwt_token');
+                    showAuthScreen();
+                    return;
+                }
+                
+                console.log('✅ Session restored from JWT token');
                 appState.isLoggedIn = true;
-                appState.currentUser = session.currentUser;
-                appState.currentTab = session.currentTab || 'grafana';
+                appState.currentUser = user;
                 showDashboard();
-                switchTab(appState.currentTab);
+                return;
             }
         } catch (error) {
-            console.error('Error restoring session:', error);
-            sessionStorage.removeItem('simsAcSession');
+            console.error('Error decoding JWT token:', error);
+            localStorage.removeItem('jwt_token');
         }
     }
+    
+    // No valid token or session - show login screen
+    console.log('No valid session found, showing login screen');
+    showAuthScreen();
 });
 
 // Export functions for debugging (remove in production)

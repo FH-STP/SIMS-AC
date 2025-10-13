@@ -13,6 +13,18 @@ public class Program
         // Add services to the container.
 
         builder.Services.AddControllers();
+        
+        // Add CORS support for frontend
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
+        });
+        
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>
@@ -76,10 +88,12 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+        
+        // Enable CORS
+        app.UseCors("AllowFrontend");
 
         app.UseAuthentication();
         app.UseAuthorization();
-
 
         app.MapControllers();
 

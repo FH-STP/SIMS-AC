@@ -83,7 +83,7 @@ ECHO    Setup Complete! The application is starting.
 ECHO    
 ECHO    Service URLs:
 ECHO    - Frontend:  http://localhost:8080
-ECHO    - API:       http://localhost:5000
+ECHO    - API:       http://localhost:5321
 ECHO    - Grafana:   http://localhost:3000 (admin/admin)
 ECHO    - Portainer: https://localhost:9443
 ECHO    - SQL Server: localhost:1433 (sa/YourStrong!SQLPa55word)

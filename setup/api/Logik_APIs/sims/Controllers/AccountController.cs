@@ -30,9 +30,10 @@ public class AccountController : ControllerBase
 
         UserController myUsers = new UserController();
         int UserID = 0;
+        String Role = "";
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID FROM Users WHERE Username= @Name;";
+        var sqlRead = "SELECT ID, Is_Admin, IsDisabled FROM Users WHERE Username= @Name;";
 
         // Get ID
         conn.Open();
@@ -44,7 +45,22 @@ public class AccountController : ControllerBase
         {
             while (reader.Read())
             {
-                UserID = reader.GetInt32(0);
+                if (reader.GetBoolean(2))
+                {
+                    return NoContent();
+                }
+                else
+                {
+                    UserID = reader.GetInt32(0);
+                    if (reader.GetBoolean(1))
+                    {
+                        Role = "Admin";
+                    }
+                    else
+                    {
+                        Role = "User";
+                    }
+                }
             }
         }
         conn.Close();
@@ -61,7 +77,7 @@ public class AccountController : ControllerBase
             return Unauthorized();
         }
         
-        var Tesult = await JwtService.Authenticate(loginRequest);
+        var Tesult = await JwtService.Authenticate(loginRequest, Role);
         if(Tesult is null)
         {
             return BadRequest("Impossible Error.");

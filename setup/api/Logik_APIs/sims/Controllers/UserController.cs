@@ -19,6 +19,7 @@ namespace sims.Controllers;
 public class UserController : ControllerBase
 {
 
+    [Authorize(Roles = "Admin")]
     [HttpPost(Name = "CreateUser")]
     public IActionResult CreateUser([FromBody] User user)
     {
@@ -106,6 +107,7 @@ public class UserController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete(Name = "DisableUser")]
     public IActionResult DisableUser([FromBody] int id)
     {

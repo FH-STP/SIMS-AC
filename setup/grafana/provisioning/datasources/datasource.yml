@@ -1,0 +1,16 @@
+# /setup/grafana/provisioning/datasources/datasource.yml
+apiVersion: 1
+
+datasources:
+  - name: MSSQL-SIMS
+    type: mssql
+    access: proxy
+    url: sql-db:1433
+    user: sa
+    database: SIMS
+    secureJsonData:
+      password: '${SA_PASSWORD}'
+    jsonData:
+      encrypt: 'false'
+
+

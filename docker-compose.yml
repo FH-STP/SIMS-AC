@@ -75,11 +75,16 @@ services:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
-    user: "${UID}:${GID}"
+    user: "${UID}:${GID}" # Correctly runs as your user
+    environment:
+      - SA_PASSWORD=${SQL_PASSWORD} # Passes the password to the datasource config
     volumes:
+      # Persistent storage for Grafana's internal database
       - ./data/grafana:/var/lib/grafana
+      # Mount the provisioning files for datasources and dashboards
       - ./setup/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./setup/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      # Mount the actual dashboard JSON file
       - ./setup/grafana/dashboards:/var/lib/grafana/dashboards
     restart: unless-stopped
     networks:

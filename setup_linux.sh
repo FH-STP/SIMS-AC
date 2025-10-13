@@ -40,24 +40,3 @@ echo "   Setup Complete! The application is starting."
 echo "   (See README.md for specific service URLs)"
 echo "======================================================="
 echo ""
-```
-
-### What to Do Now
-
-1.  **Delete the old scripts:**
-    * `setup-and-run.sh`
-    * `setup/linux/setup_functions.sh`
-
-2.  **Create the new `setup.sh` file** in your project's root directory and paste the code from above into it.
-
-3.  **Run a full, clean reset** to remove any old, broken containers:
-    ```bash
-    docker compose down --volumes
-    ```
-
-4.  **Make the new script executable and run it:**
-    ```bash
-    chmod +x setup.sh
-    ./setup.sh
-    
-

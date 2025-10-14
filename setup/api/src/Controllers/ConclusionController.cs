@@ -55,12 +55,16 @@ public class ConclusionController : ControllerBase
         {
             IsInformational = "1";
         }
-        var SQLInsert = "INSERT INTO Conclusion_Definitions (Text, IsTruePositive, IsInformational) VALUES ('" +
-        conclusion.Text + "', " + IsTruePositive + ", " + IsInformational + ");";
-        //TODO
+        var SQLInsert = "INSERT INTO Conclusion_Definitions (Text, IsTruePositive, IsInformational) VALUES (@Text, @IsTruePositive, @IsInformational);";
 
         conn.Open();
         var Command = new SqlCommand(SQLInsert, conn);
+        Command.Parameters.Add("@Text", System.Data.SqlDbType.VarChar);
+        Command.Parameters["@Text"].Value = conclusion.Text;
+        Command.Parameters.Add("@IsTruePositive", System.Data.SqlDbType.Bit);
+        Command.Parameters["@IsTruePositive"].Value = IsTruePositive;
+        Command.Parameters.Add("@IsInformational", System.Data.SqlDbType.Bit);
+        Command.Parameters["@IsInformational"].Value = IsInformational;
         Command.ExecuteNonQuery();
         conn.Close();
 

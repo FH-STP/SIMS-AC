@@ -3,6 +3,8 @@ const appState = {
     isLoggedIn: false,
     currentUser: null,
     currentTab: 'grafana',
+    adminAuthenticatedForRegistration: false, // Track if admin is authenticated for user creation
+    adminTokenForRegistration: null, // Store admin token temporarily for user creation
     settings: {
         darkMode: false,
         emailNotifications: true,
@@ -12,61 +14,8 @@ const appState = {
     }
 };
 
-// DOM Elements
-const elements = {
-    // Auth Elements
-    authScreen: document.getElementById('authScreen'),
-    loginContainer: document.getElementById('loginContainer'),
-    registerContainer: document.getElementById('registerContainer'),
-    loginForm: document.getElementById('loginForm'),
-    registerForm: document.getElementById('registerForm'),
-    loginError: document.getElementById('loginError'),
-    registerError: document.getElementById('registerError'),
-    registerSuccess: document.getElementById('registerSuccess'),
-    showRegister: document.getElementById('showRegister'),
-    showLogin: document.getElementById('showLogin'),
-    
-    // Dashboard Elements
-    dashboard: document.getElementById('dashboard'),
-    userMenuBtn: document.getElementById('userMenuBtn'),
-    userDropdown: document.getElementById('userDropdown'),
-    currentUser: document.getElementById('currentUser'),
-    topNavAvatar: document.getElementById('topNavAvatar'),
-    topNavAvatarPlaceholder: document.getElementById('topNavAvatarPlaceholder'),
-    logoutBtn: document.getElementById('logoutBtn'),
-    userSettings: document.getElementById('userSettings'),
-    userProfile: document.getElementById('userProfile'),
-    
-    // Navigation
-    navButtons: document.querySelectorAll('.nav-button'),
-    tabContents: document.querySelectorAll('.tab-content'),
-    
-    // Profile Elements
-    profileForm: document.getElementById('profileForm'),
-    profileAvatar: document.getElementById('profileAvatar'),
-    avatarPlaceholder: document.getElementById('avatarPlaceholder'),
-    profileImageInput: document.getElementById('profileImageInput'),
-    removeProfileImage: document.getElementById('removeProfileImage'),
-    profileUsername: document.getElementById('profileUsername'),
-    profileEmail: document.getElementById('profileEmail'),
-    profilePhone: document.getElementById('profilePhone'),
-    profileSuccess: document.getElementById('profileSuccess'),
-    profileError: document.getElementById('profileError'),
-    cancelProfileChanges: document.getElementById('cancelProfileChanges'),
-    
-    // Settings Elements
-    settingsModal: document.getElementById('settingsModal'),
-    closeSettings: document.getElementById('closeSettings'),
-    darkModeToggle: document.getElementById('darkModeToggle'),
-    emailNotifications: document.getElementById('emailNotifications'),
-    incidentNotifications: document.getElementById('incidentNotifications'),
-    systemNotifications: document.getElementById('systemNotifications'),
-    securityNotifications: document.getElementById('securityNotifications'),
-    saveSettings: document.getElementById('saveSettings'),
-    resetSettings: document.getElementById('resetSettings'),
-    settingsSuccess: document.getElementById('settingsSuccess'),
-    settingsError: document.getElementById('settingsError')
-};
+// DOM Elements - will be initialized after DOM is loaded
+let elements = {};
 
 // API Configuration
 // Direct connection to API on port 5321 (bypass nginx proxy for now)
@@ -92,9 +41,10 @@ async function login(username, password) {
             const data = await response.json();
             console.log('✅ Login successful:', data);
             
-            // Store JWT token if provided (API returns AccessToken, not token)
-            if (data.AccessToken) {
-                localStorage.setItem('jwt_token', data.AccessToken);
+            // Store JWT token if provided (API returns accessToken in lowercase)
+            const token = data.accessToken || data.AccessToken;
+            if (token) {
+                localStorage.setItem('jwt_token', token);
                 console.log('🔑 JWT token stored successfully');
             }
             
@@ -322,14 +272,74 @@ async function simulateApiCall(endpoint, options = {}) {
     });
 }
 
-// Registration Functions
-async function register(userData) {
+// Admin Authentication for User Registration
+async function authenticateAdminForRegistration(username, password) {
+    console.log(`🔐 Attempting admin authentication for user creation with username: ${username}`);
     try {
-        // Real API call to /User endpoint (CreateUser)
-        const response = await fetch(`${API_BASE_URL}/User`, {
+        // Real API call to /Account/Login endpoint
+        const response = await fetch(`${API_BASE_URL}/Account/Login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                UserName: username, 
+                Password: password 
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Admin authentication successful:', data);
+            
+            // Check if user is actually an admin (you may need to verify this based on your API response)
+            // Store the admin token temporarily for user creation
+            // Note: API returns 'accessToken' (lowercase) not 'AccessToken'
+            const token = data.accessToken || data.AccessToken;
+            
+            if (token) {
+                console.log('Setting admin token in appState...');
+                appState.adminTokenForRegistration = token;
+                appState.adminAuthenticatedForRegistration = true;
+                console.log('🔑 Admin token stored for user creation');
+                console.log('Verification - Token in appState:', appState.adminTokenForRegistration);
+                console.log('Verification - Auth flag in appState:', appState.adminAuthenticatedForRegistration);
+            } else {
+                console.error('⚠️ Access token is missing in response!');
+            }
+            
+            return { success: true };
+        } else if (response.status === 401) {
+            console.warn('Admin authentication failed: Unauthorized');
+            return { success: false, error: 'Ungültige Admin-Anmeldedaten' };
+        } else if (response.status === 204) {
+            console.warn('Admin authentication failed: Account disabled');
+            return { success: false, error: 'Admin-Konto ist deaktiviert' };
+        } else {
+            const errorText = await response.text();
+            console.error('Admin authentication failed:', response.status, errorText);
+            return { success: false, error: 'Admin-Authentifizierung fehlgeschlagen' };
+        }
+    } catch (error) {
+        console.error('Admin authentication error:', error);
+        return { success: false, error: 'Verbindungsfehler zur API. Bitte versuchen Sie es später erneut.' };
+    }
+}
+
+// Registration Functions
+async function register(userData) {
+    try {
+        // Ensure admin is authenticated
+        if (!appState.adminAuthenticatedForRegistration || !appState.adminTokenForRegistration) {
+            return { success: false, error: 'Admin-Authentifizierung erforderlich' };
+        }
+
+        // Real API call to /User endpoint (CreateUser) with admin token
+        const response = await fetch(`${API_BASE_URL}/User`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${appState.adminTokenForRegistration}`
             },
             body: JSON.stringify({
                 UserName: userData.username,
@@ -341,25 +351,35 @@ async function register(userData) {
         });
 
         if (response.ok) {
-            console.log('✅ Registration successful');
-            return { success: true, message: 'Registrierung erfolgreich!' };
+            console.log('✅ User creation successful');
+            
+            // Clear admin token after successful user creation
+            appState.adminAuthenticatedForRegistration = false;
+            appState.adminTokenForRegistration = null;
+            
+            return { success: true, message: 'Benutzer erfolgreich erstellt!' };
         } else if (response.status === 400) {
             const errorText = await response.text();
-            console.warn('Registration failed:', errorText);
+            console.warn('User creation failed:', errorText);
             
             // Check for specific error messages
             if (errorText.includes('Password to weak')) {
                 return { success: false, error: 'Passwort zu schwach. Verwenden Sie ein stärkeres Passwort.' };
             } else {
-                return { success: false, error: 'Registrierung fehlgeschlagen: ' + errorText };
+                return { success: false, error: 'Benutzererstellung fehlgeschlagen: ' + errorText };
             }
+        } else if (response.status === 401) {
+            // Admin token expired or invalid
+            appState.adminAuthenticatedForRegistration = false;
+            appState.adminTokenForRegistration = null;
+            return { success: false, error: 'Admin-Sitzung abgelaufen. Bitte erneut anmelden.' };
         } else {
             const errorText = await response.text();
-            console.error('Registration failed:', response.status, errorText);
-            return { success: false, error: 'Registrierung fehlgeschlagen' };
+            console.error('User creation failed:', response.status, errorText);
+            return { success: false, error: 'Benutzererstellung fehlgeschlagen' };
         }
     } catch (error) {
-        console.error('Registration error:', error);
+        console.error('User creation error:', error);
         return { success: false, error: 'Verbindungsfehler zur API. Bitte versuchen Sie es später erneut.' };
     }
 }
@@ -379,15 +399,41 @@ function showLoginForm() {
     elements.registerContainer.style.display = 'none';
     elements.loginError.style.display = 'none';
     elements.loginForm.reset();
+    
+    // Reset registration state
+    appState.adminAuthenticatedForRegistration = false;
+    appState.adminTokenForRegistration = null;
 }
 
 function showRegisterForm() {
     elements.loginContainer.style.display = 'none';
     elements.registerContainer.style.display = 'block';
+    
+    // Reset to step 1 (admin authentication)
+    elements.adminAuthStep.style.display = 'block';
+    elements.userCreationStep.style.display = 'none';
+    elements.adminAuthError.style.display = 'none';
+    elements.adminAuthForm.reset();
+    
+    // Reset state
+    appState.adminAuthenticatedForRegistration = false;
+    appState.adminTokenForRegistration = null;
+}
+
+function showUserCreationStep() {
+    console.log('🔄 Switching to user creation step...');
+    console.log('adminAuthStep element:', elements.adminAuthStep);
+    console.log('userCreationStep element:', elements.userCreationStep);
+    
+    // Show step 2 after admin authentication
+    elements.adminAuthStep.style.display = 'none';
+    elements.userCreationStep.style.display = 'block';
     elements.registerError.style.display = 'none';
     elements.registerSuccess.style.display = 'none';
     elements.registerForm.reset();
     clearImagePreview('reg');
+    
+    console.log('✅ User creation step should now be visible');
 }
 
 function showDashboard() {
@@ -635,6 +681,68 @@ function hideSettingsModal() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DOM Elements after DOM is loaded
+    elements = {
+        // Auth Elements
+        authScreen: document.getElementById('authScreen'),
+        loginContainer: document.getElementById('loginContainer'),
+        registerContainer: document.getElementById('registerContainer'),
+        adminAuthStep: document.getElementById('adminAuthStep'),
+        userCreationStep: document.getElementById('userCreationStep'),
+        adminAuthForm: document.getElementById('adminAuthForm'),
+        adminAuthError: document.getElementById('adminAuthError'),
+        loginForm: document.getElementById('loginForm'),
+        registerForm: document.getElementById('registerForm'),
+        loginError: document.getElementById('loginError'),
+        registerError: document.getElementById('registerError'),
+        registerSuccess: document.getElementById('registerSuccess'),
+        showRegister: document.getElementById('showRegister'),
+        showLogin: document.getElementById('showLogin'),
+        showLoginFromAdmin: document.getElementById('showLoginFromAdmin'),
+        cancelRegistration: document.getElementById('cancelRegistration'),
+        
+        // Dashboard Elements
+        dashboard: document.getElementById('dashboard'),
+        userMenuBtn: document.getElementById('userMenuBtn'),
+        userDropdown: document.getElementById('userDropdown'),
+        currentUser: document.getElementById('currentUser'),
+        topNavAvatar: document.getElementById('topNavAvatar'),
+        topNavAvatarPlaceholder: document.getElementById('topNavAvatarPlaceholder'),
+        logoutBtn: document.getElementById('logoutBtn'),
+        userSettings: document.getElementById('userSettings'),
+        userProfile: document.getElementById('userProfile'),
+        
+        // Navigation
+        navButtons: document.querySelectorAll('.nav-button'),
+        tabContents: document.querySelectorAll('.tab-content'),
+        
+        // Profile Elements
+        profileForm: document.getElementById('profileForm'),
+        profileAvatar: document.getElementById('profileAvatar'),
+        avatarPlaceholder: document.getElementById('avatarPlaceholder'),
+        profileImageInput: document.getElementById('profileImageInput'),
+        removeProfileImage: document.getElementById('removeProfileImage'),
+        profileUsername: document.getElementById('profileUsername'),
+        profileEmail: document.getElementById('profileEmail'),
+        profilePhone: document.getElementById('profilePhone'),
+        profileSuccess: document.getElementById('profileSuccess'),
+        profileError: document.getElementById('profileError'),
+        cancelProfileChanges: document.getElementById('cancelProfileChanges'),
+        
+        // Settings Elements
+        settingsModal: document.getElementById('settingsModal'),
+        closeSettings: document.getElementById('closeSettings'),
+        darkModeToggle: document.getElementById('darkModeToggle'),
+        emailNotifications: document.getElementById('emailNotifications'),
+        incidentNotifications: document.getElementById('incidentNotifications'),
+        systemNotifications: document.getElementById('systemNotifications'),
+        securityNotifications: document.getElementById('securityNotifications'),
+        saveSettings: document.getElementById('saveSettings'),
+        resetSettings: document.getElementById('resetSettings'),
+        settingsSuccess: document.getElementById('settingsSuccess'),
+        settingsError: document.getElementById('settingsError')
+    };
+
     // Login form submission
     elements.loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -661,7 +769,41 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Anmelden';
     });
 
-    // Registration form submission
+    // Admin Authentication form submission (Step 1 of registration)
+    elements.adminAuthForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('adminUsername').value;
+        const password = document.getElementById('adminPassword').value;
+        
+        // Disable form during authentication
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authentifiziere...';
+        
+        const result = await authenticateAdminForRegistration(username, password);
+        
+        console.log('Admin auth result:', result);
+        console.log('Admin token stored:', appState.adminTokenForRegistration);
+        console.log('Admin authenticated flag:', appState.adminAuthenticatedForRegistration);
+        
+        if (result.success) {
+            console.log('Moving to user creation step...');
+            elements.adminAuthError.style.display = 'none';
+            // Move to step 2 (user creation)
+            showUserCreationStep();
+        } else {
+            console.error('Admin auth failed:', result.error);
+            elements.adminAuthError.textContent = result.error;
+            elements.adminAuthError.style.display = 'block';
+        }
+        
+        // Re-enable form
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-unlock-alt"></i> Als Admin anmelden';
+    });
+
+    // Registration form submission (Step 2 - User creation)
     elements.registerForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -691,15 +833,16 @@ document.addEventListener('DOMContentLoaded', function() {
             profileImage: profileImage
         };
         
-        // Disable form during registration
+        // Disable form during user creation
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrieren...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Erstelle Benutzer...';
         
         const result = await register(userData);
         
         if (result.success) {
             elements.registerError.style.display = 'none';
+            elements.registerSuccess.textContent = result.message;
             elements.registerSuccess.style.display = 'block';
             elements.registerForm.reset();
             clearImagePreview('reg');
@@ -712,11 +855,27 @@ document.addEventListener('DOMContentLoaded', function() {
             elements.registerError.textContent = result.error;
             elements.registerError.style.display = 'block';
             elements.registerSuccess.style.display = 'none';
+            
+            // If admin session expired, go back to step 1
+            if (result.error.includes('Admin-Sitzung abgelaufen')) {
+                setTimeout(() => {
+                    showRegisterForm();
+                }, 2000);
+            }
         }
         
         // Re-enable form
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Registrieren';
+        submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Benutzer erstellen';
+    });
+
+    // Cancel user creation button
+    elements.cancelRegistration.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Reset and go back to login
+        appState.adminAuthenticatedForRegistration = false;
+        appState.adminTokenForRegistration = null;
+        showLoginForm();
     });
 
     // Auth screen switching
@@ -726,6 +885,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     elements.showLogin.addEventListener('click', function(e) {
+        e.preventDefault();
+        showLoginForm();
+    });
+    
+    elements.showLoginFromAdmin.addEventListener('click', function(e) {
         e.preventDefault();
         showLoginForm();
     });

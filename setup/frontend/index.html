@@ -39,51 +39,86 @@
 
         <!-- Register Form -->
         <div id="registerContainer" class="auth-container" style="display: none;">
-            <div class="auth-header">
-                <h1><i class="fas fa-user-plus"></i> Registrierung</h1>
-                <p>Neues Konto erstellen</p>
+            <!-- Step 1: Admin Authentication -->
+            <div id="adminAuthStep" class="auth-step">
+                <div class="auth-header">
+                    <h1><i class="fas fa-shield-alt"></i> Admin-Authentifizierung</h1>
+                    <p>Bitte melden Sie sich als Administrator an, um einen neuen Benutzer zu erstellen</p>
+                </div>
+                <form id="adminAuthForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="adminUsername">Admin-Benutzername</label>
+                        <input type="text" id="adminUsername" name="adminUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword">Admin-Passwort</label>
+                        <input type="password" id="adminPassword" name="adminPassword" required>
+                    </div>
+                    <button type="submit" class="auth-btn">
+                        <i class="fas fa-unlock-alt"></i> Als Admin anmelden
+                    </button>
+                    <div id="adminAuthError" class="error-message" style="display: none;">
+                        Ungültige Admin-Anmeldedaten. Bitte versuchen Sie es erneut.
+                    </div>
+                </form>
+                <div class="auth-switch">
+                    <p>Zurück zur Anmeldung? <a href="#" id="showLoginFromAdmin">Hier anmelden</a></p>
+                </div>
             </div>
-            <form id="registerForm" class="auth-form">
-                <div class="form-group">
-                    <label for="regUsername">Benutzername *</label>
-                    <input type="text" id="regUsername" name="username" required>
+
+            <!-- Step 2: User Registration (shown after admin auth) -->
+            <div id="userCreationStep" class="auth-step" style="display: none;">
+                <div class="auth-header">
+                    <h1><i class="fas fa-user-plus"></i> Neuen Benutzer erstellen</h1>
+                    <p>Als Administrator angemeldet - Erstellen Sie jetzt einen neuen Benutzer</p>
                 </div>
-                <div class="form-group">
-                    <label for="regEmail">E-Mail *</label>
-                    <input type="email" id="regEmail" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="regPassword">Passwort *</label>
-                    <input type="password" id="regPassword" name="password" required minlength="6">
-                </div>
-                <div class="form-group">
-                    <label for="regConfirmPassword">Passwort bestätigen *</label>
-                    <input type="password" id="regConfirmPassword" name="confirmPassword" required minlength="6">
-                </div>
-                <div class="form-group">
-                    <label for="regPhone">Telefonnummer (optional)</label>
-                    <input type="tel" id="regPhone" name="phone">
-                </div>
-                <div class="form-group">
-                    <label for="regProfileImage">Profilbild (optional)</label>
-                    <input type="file" id="regProfileImage" name="profileImage" accept="image/*">
-                    <div class="file-preview" id="regImagePreview" style="display: none;">
-                        <img id="regPreviewImg" src="" alt="Vorschau">
-                        <button type="button" id="regRemoveImage" class="remove-image-btn">
-                            <i class="fas fa-times"></i>
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="regUsername">Benutzername *</label>
+                        <input type="text" id="regUsername" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">E-Mail *</label>
+                        <input type="email" id="regEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Passwort *</label>
+                        <input type="password" id="regPassword" name="password" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="regConfirmPassword">Passwort bestätigen *</label>
+                        <input type="password" id="regConfirmPassword" name="confirmPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="regPhone">Telefonnummer (optional)</label>
+                        <input type="tel" id="regPhone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="regProfileImage">Profilbild (optional)</label>
+                        <input type="file" id="regProfileImage" name="profileImage" accept="image/*">
+                        <div class="file-preview" id="regImagePreview" style="display: none;">
+                            <img id="regPreviewImg" src="" alt="Vorschau">
+                            <button type="button" id="regRemoveImage" class="remove-image-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelRegistration" class="auth-btn secondary-btn">
+                            <i class="fas fa-times"></i> Abbrechen
+                        </button>
+                        <button type="submit" class="auth-btn">
+                            <i class="fas fa-user-plus"></i> Benutzer erstellen
                         </button>
                     </div>
+                    <div id="registerError" class="error-message" style="display: none;"></div>
+                    <div id="registerSuccess" class="success-message" style="display: none;">
+                        Benutzer erfolgreich erstellt!
+                    </div>
+                </form>
+                <div class="auth-switch">
+                    <p>Bereits ein Konto? <a href="#" id="showLogin">Hier anmelden</a></p>
                 </div>
-                <button type="submit" class="auth-btn">
-                    <i class="fas fa-user-plus"></i> Registrieren
-                </button>
-                <div id="registerError" class="error-message" style="display: none;"></div>
-                <div id="registerSuccess" class="success-message" style="display: none;">
-                    Registrierung erfolgreich! Sie können sich jetzt anmelden.
-                </div>
-            </form>
-            <div class="auth-switch">
-                <p>Bereits ein Konto? <a href="#" id="showLogin">Hier anmelden</a></p>
             </div>
         </div>
     </div>
@@ -367,6 +402,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=3"></script>
 </body>
 </html>

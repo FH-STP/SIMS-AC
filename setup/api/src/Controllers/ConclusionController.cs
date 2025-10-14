@@ -57,7 +57,7 @@ public class ConclusionController : ControllerBase
         }
         var SQLInsert = "INSERT INTO Conclusion_Definitions (Text, IsTruePositive, IsInformational) VALUES ('" +
         conclusion.Text + "', " + IsTruePositive + ", " + IsInformational + ");";
-
+        //TODO
 
         conn.Open();
         var Command = new SqlCommand(SQLInsert, conn);

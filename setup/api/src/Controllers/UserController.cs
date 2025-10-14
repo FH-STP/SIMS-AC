@@ -262,7 +262,7 @@ public class UserController : ControllerBase
     public static User? GetUserInfoFromDB(int id)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, Username, EMail, Telephone, IsDisabled FROM Users";
+        var sqlRead = "SELECT ID, Username, EMail, Telephone, Is_Admin, IsDisabled FROM Users";
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -275,7 +275,7 @@ public class UserController : ControllerBase
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(3), reader.GetString(2), reader.GetBoolean(4));
+                    users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(3), reader.GetString(2), reader.GetBoolean(4), reader.GetBoolean(5));
                 }
             }
         }

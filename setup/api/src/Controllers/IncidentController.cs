@@ -20,7 +20,6 @@ public class IncidentController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -53,7 +52,6 @@ public class IncidentController : ControllerBase
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -77,7 +75,6 @@ public class IncidentController : ControllerBase
     [HttpPost(Name = "CreateIncident")]
     public IActionResult CreateIncident([FromBody] Incident incident)
     {
-        //TODO Authentication + SQL-Injection Prevention
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID,IsDisabled) VALUES (" +
         "@Owner, @Creator, @Title, @API_Text, @TimeNow, @Severity, @Status, @Notes, @Conclusio, @IsItDisabled);";
@@ -118,7 +115,6 @@ public class IncidentController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET IsDisabled=1 WHERE ID=@ID;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
@@ -136,7 +132,6 @@ public class IncidentController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET Severity=@Severity WHERE ID=@ID;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
@@ -156,7 +151,6 @@ public class IncidentController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET Status=@Status WHERE ID=@ID;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
@@ -176,7 +170,6 @@ public class IncidentController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET ConclusionID=@ConclusionID WHERE ID=@ID;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
@@ -195,8 +188,7 @@ public class IncidentController : ControllerBase
     public IActionResult ChangeNotes([FromBody] int id, string notes)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sql = "UPDATE Incidents SET Notes_Text=@Notes_Text WHERE ID="+Convert.ToString(id);
-        //TODO Authentication
+        var sql = "UPDATE Incidents SET Notes_Text=@Notes_Text WHERE ID=@ID";
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
@@ -215,9 +207,8 @@ public class IncidentController : ControllerBase
     public IActionResult Assign([FromBody] int id, int owner)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sql = "UPDATE Incidents SET OwnerID=@OwnerID WHERE ID="+Convert.ToString(id);
-        //TODO Authentication
-
+        var sql = "UPDATE Incidents SET OwnerID=@OwnerID WHERE ID=@ID";
+        //TODO fix sql injection
         conn.Open();
         var Command = new SqlCommand(sql, conn);
         Command.Parameters.Add("@OwnerID", SqlDbType.Int);
@@ -227,11 +218,57 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-                
+
         return Ok(retValue);
     }
+    
+    [HttpPost("Link")]
+    public IActionResult Link([FromBody] int parrentID, int childID)
+    {
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sql = "INSERT INTO Incident_Links (Main_IncidentID, Sub_IncidentID) VALUES (@parrentID, @childID);";
 
-    [AllowAnonymous]
+        conn.Open();
+        var Command = new SqlCommand(sql, conn);
+        Command.Parameters.Add("@parrentID", System.Data.SqlDbType.Int);
+        Command.Parameters["@parrentID"].Value = parrentID;
+        Command.Parameters.Add("@childID", System.Data.SqlDbType.Int);
+        Command.Parameters["@childID"].Value = childID;
+        Command.ExecuteNonQuery();
+        conn.Close();
+                
+        return Ok();
+    }
+
+    [HttpGet("Link/{id}")]
+    public IActionResult GetLink(int id)
+    {
+        List<int> children = new List<int>();
+        int iterator = 0;
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var sqlRead = "SELECT Main_IncidentID, Sub_IncidentID FROM Incident_Links;";
+
+
+        conn.Open();
+        var Command = new SqlCommand(sqlRead, conn);
+        var reader = Command.ExecuteReader();
+        if (reader.HasRows)
+        {
+            while (reader.Read())
+            {
+                if (reader.GetInt32(0) == id)
+                {
+                    children.Add(reader.GetInt32(1));
+                    iterator++;
+                }
+            }
+        }
+
+        conn.Close();
+        return Ok(children);
+    }
+
+    //Existiert für Test und Demonstrationszwecke
     [HttpPost("InserTestInfoIncidents")]
     public async Task<IActionResult> InserTestInfoIncidents()
     {

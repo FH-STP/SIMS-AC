@@ -18,7 +18,6 @@ public class ConclusionController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT Conclusion_ID, Text, IsTruePositive, IsInformational FROM Conclusion_Definitions";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -65,10 +64,10 @@ public class ConclusionController : ControllerBase
         Command.ExecuteNonQuery();
         conn.Close();
 
-        return CreatedAtAction(nameof(InsertSampleConclusions), new { id = conclusion.ConclusionID }, conclusion);
+        return CreatedAtAction(nameof(InsertConclusions), new { id = conclusion.ConclusionID }, conclusion);
     }
     
-    [HttpPost("InsertSampleConclusions")]
+    /*[HttpPost("InsertSampleConclusions")]
     public async Task<IActionResult> InsertSampleConclusions()
     {
         await InsertConclusions(new Conclusion(0, "System - Empty", false, false));
@@ -78,6 +77,6 @@ public class ConclusionController : ControllerBase
         await InsertConclusions(new Conclusion(0, "True Positiv - Info", true, true));
         await InsertConclusions(new Conclusion(0, "True Positiv - Malware", true, false));
         return Ok();
-    }
+    }*/
 
 }

@@ -36,7 +36,7 @@ public class UserController : ControllerBase
             int x = rnd.Next(str.Length);
             salt = salt + str[x];
         }
-        //TODO Authentication
+
         Boolean isThePWStrong = checkPWRequriements(user.Password);
         if (!isThePWStrong)
         {
@@ -116,7 +116,6 @@ public class UserController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Users SET IsDisabled=1 WHERE ID=@ID;";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sql, conn);
@@ -133,8 +132,6 @@ public class UserController : ControllerBase
     [HttpGet("GetUserInfo/{id}")]
     public IActionResult GetUserInfo(int id)
     {
-
-        //TODO Authentication
         User? user = GetUserInfoFromDB(id);
 
         if (user == null)
@@ -147,14 +144,13 @@ public class UserController : ControllerBase
         }
     }
 
-    [Authorize]
     [HttpPost("UploadPicture")]
     public async Task<IActionResult> UploadPicture(IFormFile file)
     {
         var client = new MongoClient(KonstantenSIMS.uri);
         var database = client.GetDatabase("sims");
 
-        if (!(CollectionExists(database, "profilePic")))
+        if (!CollectionExists(database, "profilePic"))
         {
             await database.CreateCollectionAsync("profilePic");
 
@@ -210,9 +206,8 @@ public class UserController : ControllerBase
         return database.ListCollectionNames(options).Any();
     }
 
-    [AllowAnonymous]
-    [HttpGet("GetUserPic/{fileId}")]
-    public async Task<IActionResult> GetUserPic(string fileId)
+    [HttpGet("GetUserPic")]
+    public async Task<IActionResult> GetUserPic()
     {
 
         // Get ID
@@ -234,17 +229,29 @@ public class UserController : ControllerBase
         conn.Close();
 
 
-        
+        //MongoDB
         var client = new MongoClient(KonstantenSIMS.uri);
-        var database = client.GetDatabase("sims"); // Ersetze durch deinen Datenbanknamen
-        var gridFSBucket = new GridFSBucket(database);
+        var database = client.GetDatabase("sims");
+        var collection = database.GetCollection<BsonDocument>("profilePic");
 
+        var filter = Builders<BsonDocument>.Filter.Eq("UserId", UserIDs);
+        var sort = Builders<BsonDocument>.Sort.Descending("UploadDate"); // Neueste zuerst
+        var latestPic = await collection.Find(filter).Sort(sort).FirstOrDefaultAsync();
+
+        if (latestPic == null)
+        {
+            return NotFound("No profile picture found.");
+        }
+
+        var fileId = latestPic["FileId"].AsString;
+        var gridFSBucket = new GridFSBucket(database);
+        
         try
         {
-            // Holen der Datei aus GridFS
-            var fileStream = gridFSBucket.OpenDownloadStreamAsync(new ObjectId(fileId));
+            var objectId = new ObjectId(fileId); 
+            var fileStream = await gridFSBucket.OpenDownloadStreamAsync(objectId);
             
-            return File(await fileStream, "application/octet-stream", fileId); // Oder ein entsprechender MIME-Typ, wenn bekannt
+            return File(fileStream, "application/octet-stream"); 
         }
         catch (Exception ex)
         {
@@ -256,7 +263,6 @@ public class UserController : ControllerBase
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT ID, Username, EMail, Telephone, IsDisabled FROM Users";
-        //TODO Authentication
 
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -269,7 +275,7 @@ public class UserController : ControllerBase
             {
                 if (reader.GetInt32(0) == id)
                 {
-                    //users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
+                    users = new User(reader.GetInt32(0), reader.GetString(1), @"Wer weiß es schon? ¯\_(ツ)_/¯", reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
                 }
             }
         }

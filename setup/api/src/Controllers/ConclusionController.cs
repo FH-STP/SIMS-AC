@@ -16,6 +16,19 @@ public class ConclusionController : ControllerBase
     [HttpGet("GetConclusionInfo/{id}")]
     public IActionResult GetConclusionInfo(int id)
     {
+        try
+        {
+            String conclusio = ConclusionInfo(id);
+            return Ok(conclusio);
+        }
+        catch
+        {
+            return BadRequest("Check API for more Info!");
+        }
+    }
+
+    public static string ConclusionInfo(int id)
+    {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT Conclusion_ID, Text, IsTruePositive, IsInformational FROM Conclusion_Definitions";
 
@@ -36,8 +49,7 @@ public class ConclusionController : ControllerBase
         }
 
         conn.Close();
-
-        return Ok(conclusion);
+        return conclusion;
     }
 
     [HttpPost("InsertConclusions")]

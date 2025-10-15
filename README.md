@@ -1,59 +1,45 @@
 
-# SIMS Project - Quick Start Guide
+# SIMS - Security Incident Management System
 
-This project uses Docker to run a multi-container application for the Security Incident Management System (SIMS). This guide will help you get the entire environment up and running with a single command.
+## What is This?
 
-### Prerequisites
+SIMS is a complete system for logging, tracking, and managing IT security incidents. Think of it as a digital logbook for a security team.
 
-Before you begin, you **must** have the following software installed on your system:
+The whole thing runs in Docker, which means the entire setup is packed into containers. This makes it easy to run the same environment on any machine, whether you're developing on your own or deploying it to a server.
 
-1.  **Docker & Docker Compose:**
+The project is built with a "microservices" approach, meaning different parts of the application run as separate, independent services that talk to each other.
+
+## What's Included?
+
+This project isn't just a single application; it's a full stack of tools:
+
+-   **The Core App:** A frontend, a .NET API, a SQL database, and a NoSQL database.
     
-    -   **Windows/macOS:**  [Docker Desktop](https://www.docker.com/products/docker-desktop/ "null") is the easiest way to get both.
-        
-    -   **Linux:** Install [Docker Engine](https://docs.docker.com/engine/install/ "null") and the [Docker Compose Plugin](https://docs.docker.com/compose/install/ "null").
-        
-2.  **Git:**
+-   **Automation & AI:** n8n for automating workflows, backed by a Postgres database, plus Ollama and Qdrant for running local AI models.
     
-    -   Required for cloning the project repository. You can download it from [git-scm.com](https://git-scm.com/downloads "null").
-        
+-   **Management & Monitoring:** Grafana for live dashboards and Portainer for easily managing the Docker containers.
+    
 
-### How to Run the Project
+## Getting Started (The Quick Way)
 
-**Step 1: Get the Project Files**
+You only need **Docker** and **Git** installed on your system.
 
-First, clone the project repository from GitHub to your local machine:
+**1. Get the Code** Open your terminal and clone the project:
 
 ```
-git clone <your-repository-url>
-cd <project-folder>
-
+git clone [https://github.com/FH-STP/SIMS-AC.git](https://github.com/FH-STP/SIMS-AC.git)
+cd SIMS-AC-main
 ```
 
-**Step 2: Run the Installer**
+**2. Run the Installer** Make the setup script executable and run it. This one command does everything for you.
 
-The installer script will prepare the environment and start all the Docker containers.
+```
+chmod +x setup_linux.sh
+./setup_linux.sh
+```
 
--   **On Windows:** Double-click the `setup-and-run.bat` file or run it from your command prompt:
-    
-    ```
-    setup-and-run.bat
-    
-    ```
-    
--   **On Linux or macOS:** First, you need to make the script executable. Then, run it.
-    
-    ```
-    # Make the script executable (only needs to be done once)
-    chmod +x setup-and-run.sh
-    
-    # Run the script
-    ./setup-and-run.sh
-    
-    ```
-    
+The script will set up all the configurations and start the containers. It might take a few minutes the first time as it downloads everything.
 
-The first time you run the script, Docker will download and build all the necessary images, which may take several minutes.
 
 ### Services Overview
 
@@ -65,18 +51,17 @@ Once the setup is complete, all services will be running. You can access them at
 | API       | The backend logic service.      | `http://localhost:5000`           | - |
 | Grafana   | For data visualization.         | `http://localhost:3000`           | admin / admin123! |
 | Portainer | For managing Docker containers. | `https://localhost:9443`          | Set on first visit! |
-| n8n 			| Workflow automation. 						| `https://localhost:5678`          | admin / YourN8nPassword! |
+| n8n 			| Workflow automation. 						| `https://localhost:5678`          | Set on first visit. |
 | SQL-DB    | MS SQL database.                | `localhost,1433` (via clients)    | sa / YourStrong!SQLPa55word |
 | MongoDB   | NoSQL database.                 | `localhost:27017` (via clients)   | simsadmin / YourStrong!MongoPa55word |
+| Ollama | LLM Service | `localhost:11434` via n8n Client |
 
-The Passwords can be easily changed by modifying the according setup script!
 
-### How to Reset the Environment
+## Troubleshooting
 
-If you need to get a completely fresh installation (for example, to re-run the database setup scripts), navigate to the project directory in your terminal and run:
+If you get an error like "container name is already in use," it means you have old containers left over from a previous run. To fix this, just run the following command to completely clean your environment before you run the setup script again:
 
 ```
-# This stops all containers and deletes all persistent data
 docker compose down --volumes
 
 ```

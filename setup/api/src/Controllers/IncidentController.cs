@@ -71,15 +71,22 @@ public class IncidentController : ControllerBase
     [HttpGet("GetIncidentList")]
     public IActionResult GetIncidentList()
     {
-        Incident[] incidentList = new Incident[25];
+        var connReader = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        connReader.Open();
+        var sqlReadSize = "SELECT COUNT(*) FROM Incidents WHERE IsDisabled=0;";
+        var CommandCount = new SqlCommand(sqlReadSize, connReader);
+        Incident[] incidentList = new Incident[(Int32) CommandCount.ExecuteScalar()];
+        connReader.Close();
+
+
         int iterator = 0;
         int conclusio = -1;
         String notes = "";
         String apiText = "";
 
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC;";
 
+        var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC;";
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
         var reader = Command.ExecuteReader();

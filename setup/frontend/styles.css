@@ -1051,3 +1051,446 @@ body.dark-mode {
 .fade-in {
     animation: fadeIn 0.5s ease-out;
 }
+
+/* Incident Management Styles */
+.tools-section {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.tool-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.tool-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.tool-btn:active {
+    transform: translateY(0);
+}
+
+.tool-btn-secondary {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.tool-btn-secondary:hover {
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+}
+
+.incidents-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: calc(100vh - 200px);
+    overflow: hidden;
+}
+
+.incidents-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    flex-wrap: wrap;
+}
+
+.api-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.api-status i {
+    font-size: 0.9rem;
+}
+
+.api-status-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+.api-status-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+}
+
+.api-status-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.filter-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.filter-select {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.incidents-table-container {
+    flex: 1;
+    overflow: auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.incidents-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.incidents-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.incidents-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.incidents-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.incident-row {
+    transition: background-color 0.2s ease;
+}
+
+.incident-id {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.incident-title {
+    font-weight: 500;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.incident-owner.unassigned {
+    color: #ef4444;
+    font-style: italic;
+}
+
+.status-badge, .severity-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.status-0 {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.status-1 {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge.status-2 {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.status-3 {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.severity-badge.severity-1 {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.severity-badge.severity-2 {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.severity-badge.severity-3 {
+    background: #fed7aa;
+    color: #c2410c;
+}
+
+.severity-badge.severity-4 {
+    background: #fecaca;
+    color: #dc2626;
+}
+
+.severity-badge.severity-5 {
+    background: #fca5a5;
+    color: #991b1b;
+    animation: pulse 2s infinite;
+}
+
+.incident-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-small {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    transition: all 0.2s ease;
+}
+
+.btn-small.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-small.btn-primary:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.btn-small.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-small.btn-secondary:hover {
+    background: #4b5563;
+    transform: scale(1.05);
+}
+
+.loading-cell, .error-cell {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.error-cell {
+    color: #ef4444;
+}
+
+.incidents-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.empty-content {
+    text-align: center;
+    color: #6b7280;
+}
+
+.empty-content i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #d1d5db;
+}
+
+.empty-content h3 {
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+/* Create Incident Modal */
+.incident-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.incident-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.incident-form textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+}
+
+.form-note {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    color: #333;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 400px;
+    transform: translateX(450px);
+    transition: transform 0.3s ease;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success-notification {
+    border-left: 4px solid #10b981;
+}
+
+.notification.error-notification {
+    border-left: 4px solid #ef4444;
+}
+
+.notification i {
+    font-size: 1.2rem;
+}
+
+.success-notification i {
+    color: #10b981;
+}
+
+.error-notification i {
+    color: #ef4444;
+}
+
+/* Dark Mode for Incident Management */
+.dark-mode .tool-btn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.dark-mode .incidents-filters {
+    background: #1e293b;
+}
+
+.dark-mode .api-status {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.dark-mode .api-status-success {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+}
+
+.dark-mode .api-status-warning {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+}
+
+.dark-mode .api-status-error {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+}
+
+.dark-mode .filter-group label {
+    color: #cbd5e0;
+}
+
+.dark-mode .filter-select {
+    background: #0f172a;
+    border: 1px solid #475569;
+    color: #f8fafc;
+}
+
+.dark-mode .incidents-table-container {
+    background: #1e293b;
+}
+
+.dark-mode .incidents-table th {
+    background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+}
+
+.dark-mode .incidents-table td {
+    border-bottom: 1px solid #475569;
+    color: #f8fafc;
+}
+
+.dark-mode .incidents-table tbody tr:hover {
+    background: #334155;
+}
+
+.dark-mode .incident-id {
+    color: #a5b4fc;
+}
+
+.dark-mode .incidents-empty {
+    background: #1e293b;
+}
+
+.dark-mode .empty-content {
+    color: #cbd5e0;
+}
+
+.dark-mode .empty-content h3 {
+    color: #f8fafc;
+}
+
+.dark-mode .notification {
+    background: #1e293b;
+    color: #f8fafc;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}

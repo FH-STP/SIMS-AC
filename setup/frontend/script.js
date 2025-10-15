@@ -443,8 +443,8 @@ function showDashboard() {
     // Update user info
     elements.currentUser.textContent = appState.currentUser.name || appState.currentUser.username;
     
-    // Update top navigation avatar
-    updateTopNavAvatar();
+    // Load profile image from MongoDB
+    loadProfileImage();
     
     // Load user profile data
     loadUserProfile();
@@ -476,8 +476,10 @@ function switchTab(tabName) {
         }
     });
 
-    // Grafana tab now opens in new window instead of iframe
-    // No special handling needed anymore
+    // Load content based on tab
+    if (tabName === 'incidents') {
+        loadIncidents();
+    }
 
     appState.currentTab = tabName;
 }
@@ -588,6 +590,103 @@ function clearImagePreview(type) {
     }
 }
 
+// Profile Image API Functions
+async function uploadProfileImage(file) {
+    try {
+        console.log('🔄 Uploading profile image...');
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${API_BASE_URL}/User/UploadPicture`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Profile image uploaded successfully:', result);
+            
+            // Reload profile image after upload
+            await loadProfileImage();
+            
+            return { success: true, fileId: result };
+        } else {
+            console.error('Failed to upload profile image:', response.status);
+            const errorText = await response.text();
+            return { success: false, error: errorText };
+        }
+    } catch (error) {
+        console.error('Error uploading profile image:', error);
+        return { success: false, error: 'Verbindungsfehler beim Hochladen' };
+    }
+}
+
+async function loadProfileImage() {
+    try {
+        console.log('🔄 Loading profile image...');
+        
+        const response = await fetch(`${API_BASE_URL}/User/GetUserPic`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const imageUrl = URL.createObjectURL(blob);
+            
+            // Update profile image in current user state
+            if (appState.currentUser) {
+                appState.currentUser.profileImage = imageUrl;
+            }
+            
+            // Update all avatar displays
+            updateAllAvatars(imageUrl);
+            
+            console.log('✅ Profile image loaded successfully');
+            return { success: true, imageUrl };
+        } else if (response.status === 404) {
+            // No profile image found - use default
+            console.log('ℹ️ No profile image found, using default');
+            updateAllAvatars(null);
+            return { success: true, imageUrl: null };
+        } else {
+            console.error('Failed to load profile image:', response.status);
+            return { success: false, error: 'Fehler beim Laden des Profilbildes' };
+        }
+    } catch (error) {
+        console.error('Error loading profile image:', error);
+        return { success: false, error: 'Verbindungsfehler beim Laden' };
+    }
+}
+
+function updateAllAvatars(imageUrl) {
+    if (imageUrl) {
+        // Show profile image in profile tab
+        elements.profileAvatar.src = imageUrl;
+        elements.profileAvatar.style.display = 'block';
+        elements.avatarPlaceholder.style.display = 'none';
+        
+        // Show profile image in top navigation
+        elements.topNavAvatar.src = imageUrl;
+        elements.topNavAvatar.style.display = 'block';
+        elements.topNavAvatarPlaceholder.style.display = 'none';
+    } else {
+        // Show placeholder in profile tab
+        elements.profileAvatar.style.display = 'none';
+        elements.avatarPlaceholder.style.display = 'flex';
+        
+        // Show placeholder in top navigation
+        elements.topNavAvatar.style.display = 'none';
+        elements.topNavAvatarPlaceholder.style.display = 'flex';
+    }
+}
+
 // Settings Functions
 function loadSettings() {
     const savedSettings = localStorage.getItem('simsAcSettings');
@@ -679,6 +778,330 @@ function hideSettingsModal() {
     elements.settingsModal.style.display = 'none';
 }
 
+// Incident Management Functions
+async function loadIncidents() {
+    try {
+        console.log('🔄 Loading incidents...');
+        
+        // Show loading state
+        const tbody = elements.incidentsTableBody;
+        tbody.innerHTML = `
+            <tr class="loading-row">
+                <td colspan="7" class="loading-cell">
+                    <i class="fas fa-spinner fa-spin"></i> Lade Incidents...
+                </td>
+            </tr>
+        `;
+
+        const response = await fetch(`${API_BASE_URL}/Incident/GetIncidentList`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            }
+        });
+
+        if (response.ok) {
+            const incidents = await response.json();
+            console.log('✅ Incidents loaded:', incidents);
+            displayIncidents(incidents);
+        } else {
+            console.error('Failed to load incidents:', response.status);
+            tbody.innerHTML = `
+                <tr class="error-row">
+                    <td colspan="7" class="error-cell">
+                        <i class="fas fa-exclamation-triangle"></i> Fehler beim Laden der Incidents
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading incidents:', error);
+        elements.incidentsTableBody.innerHTML = `
+            <tr class="error-row">
+                <td colspan="7" class="error-cell">
+                    <i class="fas fa-exclamation-triangle"></i> Verbindungsfehler
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function displayIncidents(incidents) {
+    const tbody = elements.incidentsTableBody;
+    
+    if (!incidents || incidents.length === 0) {
+        elements.incidentsEmpty.style.display = 'block';
+        tbody.innerHTML = '';
+        return;
+    }
+    
+    elements.incidentsEmpty.style.display = 'none';
+    
+    tbody.innerHTML = incidents.map(incident => {
+        if (!incident) return '';
+        
+        const statusText = getStatusText(incident.Status);
+        const severityText = getSeverityText(incident.Severity);
+        const ownerText = incident.Owner === 0 ? 'Nicht zugewiesen' : `User ${incident.Owner}`;
+        const isUnassigned = incident.Owner === 0;
+        
+        return `
+            <tr class="incident-row" data-incident-id="${incident.Id}">
+                <td class="incident-id">#${incident.Id}</td>
+                <td class="incident-title" title="${incident.Title}">${incident.Title}</td>
+                <td class="incident-owner ${isUnassigned ? 'unassigned' : ''}">${ownerText}</td>
+                <td class="incident-status">
+                    <span class="status-badge status-${incident.Status}">${statusText}</span>
+                </td>
+                <td class="incident-severity">
+                    <span class="severity-badge severity-${incident.Severity}">${severityText}</span>
+                </td>
+                <td class="incident-created">${formatDate(incident.CreationTime)}</td>
+                <td class="incident-actions">
+                    ${isUnassigned ? 
+                        `<button class="btn-small btn-primary assign-to-me" data-incident-id="${incident.Id}" title="Mir zuweisen">
+                            <i class="fas fa-hand-paper"></i>
+                        </button>` 
+                        : ''
+                    }
+                    <button class="btn-small btn-secondary incident-details" data-incident-id="${incident.Id}" title="Details anzeigen">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Add event listeners for action buttons
+    addIncidentActionListeners();
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        0: 'Offen',
+        1: 'In Bearbeitung',
+        2: 'Gelöst',
+        3: 'Geschlossen'
+    };
+    return statusMap[status] || 'Unbekannt';
+}
+
+function getSeverityText(severity) {
+    const severityMap = {
+        1: 'Niedrig',
+        2: 'Mittel',
+        3: 'Hoch',
+        4: 'Kritisch',
+        5: 'Notfall'
+    };
+    return severityMap[severity] || 'Unbekannt';
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function addIncidentActionListeners() {
+    // Assign to me buttons
+    document.querySelectorAll('.assign-to-me').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const incidentId = parseInt(this.dataset.incidentId);
+            await assignIncidentToCurrentUser(incidentId);
+        });
+    });
+    
+    // Details buttons (placeholder for future implementation)
+    document.querySelectorAll('.incident-details').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const incidentId = parseInt(this.dataset.incidentId);
+            alert(`Details für Incident #${incidentId} - Coming soon!`);
+        });
+    });
+}
+
+async function assignIncidentToCurrentUser(incidentId) {
+    try {
+        console.log(`🔄 Assigning incident ${incidentId} to current user...`);
+        
+        if (!appState.currentUser) {
+            console.error('No current user found');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/Incident/Assign`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: JSON.stringify({
+                Id: incidentId,
+                Owner: appState.currentUser.id
+            })
+        });
+
+        if (response.ok) {
+            console.log('✅ Incident assigned successfully');
+            showSuccessMessage('Incident wurde Ihnen zugewiesen!');
+            // Reload incidents to reflect changes
+            loadIncidents();
+        } else {
+            console.error('Failed to assign incident:', response.status);
+            showErrorMessage('Fehler beim Zuweisen des Incidents');
+        }
+    } catch (error) {
+        console.error('Error assigning incident:', error);
+        showErrorMessage('Verbindungsfehler beim Zuweisen');
+    }
+}
+
+// Function to create test incidents via API
+async function createTestIncidents() {
+    try {
+        console.log('🔄 Creating test incidents...');
+        
+        const response = await fetch(`${API_BASE_URL}/Incident/InserTestInfoIncidents`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ Test incidents created successfully');
+            showSuccessMessage('Test-Incidents wurden erfolgreich erstellt!');
+            // Reload incidents to show new test incidents
+            if (appState.currentTab === 'incidents') {
+                loadIncidents();
+            }
+        } else {
+            console.error('Failed to create test incidents:', response.status);
+            showErrorMessage('Fehler beim Erstellen der Test-Incidents');
+        }
+    } catch (error) {
+        console.error('Error creating test incidents:', error);
+        showErrorMessage('Verbindungsfehler beim Erstellen der Test-Incidents');
+    }
+}
+
+async function createIncident(incidentData) {
+    try {
+        console.log('🔄 Creating new incident...', incidentData);
+        
+        if (!appState.currentUser) {
+            console.error('No current user found');
+            return { success: false, error: 'Benutzer nicht angemeldet' };
+        }
+
+        // Prepare incident data for API
+        const newIncident = {
+            Id: 0, // Will be generated by backend
+            Owner: appState.currentUser.id, // Assign to current user
+            Creator: appState.currentUser.id,
+            Title: incidentData.title,
+            APIText: incidentData.apiText,
+            NotesText: incidentData.notes || '',
+            Severity: parseInt(incidentData.severity),
+            Status: parseInt(incidentData.status),
+            Conclusion: 1, // Set conclusion to 1
+            CreationTime: new Date().toISOString(),
+            IsDisabled: false
+        };
+
+        const response = await fetch(`${API_BASE_URL}/Incident`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: JSON.stringify(newIncident)
+        });
+
+        if (response.ok) {
+            console.log('✅ Incident created successfully');
+            return { success: true };
+        } else {
+            console.error('Failed to create incident:', response.status);
+            const errorText = await response.text();
+            return { success: false, error: 'Fehler beim Erstellen des Incidents: ' + errorText };
+        }
+    } catch (error) {
+        console.error('Error creating incident:', error);
+        return { success: false, error: 'Verbindungsfehler beim Erstellen des Incidents' };
+    }
+}
+
+function showCreateIncidentModal() {
+    elements.createIncidentModal.style.display = 'flex';
+    // Reset form
+    elements.createIncidentForm.reset();
+    elements.createIncidentError.style.display = 'none';
+    elements.createIncidentSuccess.style.display = 'none';
+    
+    // Set default JSON for API Text
+    const apiTextArea = document.getElementById('incidentApiText');
+    if (apiTextArea) {
+        apiTextArea.value = JSON.stringify({
+            "description": "Beschreibung des Incidents",
+            "source": "System",
+            "timestamp": new Date().toISOString(),
+            "priority": "medium"
+        }, null, 2);
+    }
+}
+
+function hideCreateIncidentModal() {
+    elements.createIncidentModal.style.display = 'none';
+}
+
+function showSuccessMessage(message) {
+    // Create a temporary success notification
+    const notification = document.createElement('div');
+    notification.className = 'notification success-notification';
+    notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+function showErrorMessage(message) {
+    // Create a temporary error notification
+    const notification = document.createElement('div');
+    notification.className = 'notification error-notification';
+    notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize DOM Elements after DOM is loaded
@@ -740,7 +1163,22 @@ document.addEventListener('DOMContentLoaded', function() {
         saveSettings: document.getElementById('saveSettings'),
         resetSettings: document.getElementById('resetSettings'),
         settingsSuccess: document.getElementById('settingsSuccess'),
-        settingsError: document.getElementById('settingsError')
+        settingsError: document.getElementById('settingsError'),
+        
+        // Incident Elements
+        createIncidentBtn: document.getElementById('createIncidentBtn'),
+        createTestIncidentsBtn: document.getElementById('createTestIncidentsBtn'),
+        incidentsTableBody: document.getElementById('incidentsTableBody'),
+        incidentsEmpty: document.getElementById('incidentsEmpty'),
+        statusFilter: document.getElementById('statusFilter'),
+        severityFilter: document.getElementById('severityFilter'),
+        refreshIncidents: document.getElementById('refreshIncidents'),
+        createIncidentModal: document.getElementById('createIncidentModal'),
+        createIncidentForm: document.getElementById('createIncidentForm'),
+        closeCreateIncident: document.getElementById('closeCreateIncident'),
+        cancelCreateIncident: document.getElementById('cancelCreateIncident'),
+        createIncidentSuccess: document.getElementById('createIncidentSuccess'),
+        createIncidentError: document.getElementById('createIncidentError')
     };
 
     // Login form submission
@@ -1003,12 +1441,36 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Profile image upload
-    elements.profileImageInput.addEventListener('change', function(e) {
-        handleImageUpload(e.target, 'profile');
+    elements.profileImageInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Show preview immediately
+            handleImageUpload(e.target, 'profile');
+            
+            // Upload to server
+            const result = await uploadProfileImage(file);
+            if (result.success) {
+                showSuccessMessage('Profilbild wurde erfolgreich hochgeladen!');
+            } else {
+                showErrorMessage('Fehler beim Hochladen des Profilbildes: ' + result.error);
+                // Revert preview on error
+                loadProfileImage();
+            }
+        }
     });
 
     elements.removeProfileImage.addEventListener('click', function() {
+        // Clear preview immediately
         clearImagePreview('profile');
+        
+        // Update user state
+        if (appState.currentUser) {
+            appState.currentUser.profileImage = null;
+        }
+        
+        // Note: We don't have a delete API endpoint, so we just clear locally
+        // The user can upload a new image to replace the old one
+        showSuccessMessage('Profilbild wurde entfernt!');
     });
 
     elements.cancelProfileChanges.addEventListener('click', function() {
@@ -1053,6 +1515,110 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Incident Management Event Listeners
+    elements.createIncidentBtn.addEventListener('click', function() {
+        showCreateIncidentModal();
+    });
+
+    elements.createTestIncidentsBtn.addEventListener('click', function() {
+        createTestIncidents();
+    });
+
+    elements.closeCreateIncident.addEventListener('click', function() {
+        hideCreateIncidentModal();
+    });
+
+    elements.cancelCreateIncident.addEventListener('click', function() {
+        hideCreateIncidentModal();
+    });
+
+    elements.createIncidentForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const incidentData = {
+            title: formData.get('title'),
+            severity: formData.get('severity'),
+            status: formData.get('status'),
+            apiText: formData.get('apiText'),
+            notes: formData.get('notes')
+        };
+        
+        // Validate API Text - must not be empty and must be valid JSON
+        if (!incidentData.apiText || incidentData.apiText.trim() === '') {
+            elements.createIncidentError.textContent = 'API Text darf nicht leer sein';
+            elements.createIncidentError.style.display = 'block';
+            elements.createIncidentSuccess.style.display = 'none';
+            return;
+        }
+        
+        try {
+            const parsedJson = JSON.parse(incidentData.apiText);
+            // Ensure it's not just an empty object
+            if (typeof parsedJson === 'object' && parsedJson !== null && Object.keys(parsedJson).length === 0) {
+                elements.createIncidentError.textContent = 'API Text darf nicht nur ein leeres JSON-Objekt sein';
+                elements.createIncidentError.style.display = 'block';
+                elements.createIncidentSuccess.style.display = 'none';
+                return;
+            }
+        } catch (error) {
+            elements.createIncidentError.textContent = 'Ungültiges JSON-Format im API Text Feld';
+            elements.createIncidentError.style.display = 'block';
+            elements.createIncidentSuccess.style.display = 'none';
+            return;
+        }
+        
+        // Disable submit button
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Erstelle...';
+        
+        const result = await createIncident(incidentData);
+        
+        if (result.success) {
+            elements.createIncidentSuccess.style.display = 'block';
+            elements.createIncidentError.style.display = 'none';
+            e.target.reset();
+            
+            // Close modal after short delay and refresh incidents
+            setTimeout(() => {
+                hideCreateIncidentModal();
+                if (appState.currentTab === 'incidents') {
+                    loadIncidents();
+                }
+            }, 1500);
+        } else {
+            elements.createIncidentError.textContent = result.error;
+            elements.createIncidentError.style.display = 'block';
+            elements.createIncidentSuccess.style.display = 'none';
+        }
+        
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Incident erstellen';
+    });
+
+    elements.refreshIncidents.addEventListener('click', function() {
+        if (appState.currentTab === 'incidents') {
+            loadIncidents();
+        }
+    });
+
+    // Add incident filters (placeholder for future implementation)
+    elements.statusFilter.addEventListener('change', function() {
+        // TODO: Implement filtering
+        if (appState.currentTab === 'incidents') {
+            loadIncidents();
+        }
+    });
+
+    elements.severityFilter.addEventListener('change', function() {
+        // TODO: Implement filtering  
+        if (appState.currentTab === 'incidents') {
+            loadIncidents();
+        }
+    });
+
     // Load settings on startup
     loadSettings();
     applySettings();
@@ -1077,6 +1643,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         elements.userDropdown.style.display = 'none';
         hideSettingsModal();
+        hideCreateIncidentModal();
     }
     
     // Ctrl+L for quick logout (when logged in)
@@ -1177,5 +1744,8 @@ window.simsApp = {
     login,
     logout,
     switchTab,
+    createTestIncidents,
+    uploadProfileImage,
+    loadProfileImage,
     appState
 };

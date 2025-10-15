@@ -132,7 +132,12 @@
             </div>
             <div class="nav-center">
                 <div class="tools-section">
-                    <span class="tools-placeholder">Tools (Coming Soon)</span>
+                    <button id="createIncidentBtn" class="tool-btn">
+                        <i class="fas fa-plus-circle"></i> Neuer Incident
+                    </button>
+                    <button id="createTestIncidentsBtn" class="tool-btn tool-btn-secondary">
+                        <i class="fas fa-flask"></i> Test-Incidents
+                    </button>
                 </div>
             </div>
             <div class="nav-right">
@@ -210,11 +215,63 @@
                     <div class="tab-header">
                         <h2><i class="fas fa-exclamation-triangle"></i> Incident Management</h2>
                     </div>
-                    <div class="incidents-placeholder">
-                        <div class="placeholder-content">
-                            <i class="fas fa-tools"></i>
-                            <h3>Coming Soon</h3>
-                            <p>Das Incident Management System wird bald verfügbar sein.</p>
+                    <div class="incidents-container">
+                        <div class="incidents-filters">
+                            <div class="filter-group">
+                                <label for="statusFilter">Status Filter:</label>
+                                <select id="statusFilter" class="filter-select">
+                                    <option value="">Alle Status</option>
+                                    <option value="0">Offen</option>
+                                    <option value="1">In Bearbeitung</option>
+                                    <option value="2">Gelöst</option>
+                                    <option value="3">Geschlossen</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="severityFilter">Severity Filter:</label>
+                                <select id="severityFilter" class="filter-select">
+                                    <option value="">Alle Severitäten</option>
+                                    <option value="1">Niedrig</option>
+                                    <option value="2">Mittel</option>
+                                    <option value="3">Hoch</option>
+                                    <option value="4">Kritisch</option>
+                                    <option value="5">Notfall</option>
+                                </select>
+                            </div>
+                            <button id="refreshIncidents" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Aktualisieren
+                            </button>
+                        </div>
+                        
+                        <div class="incidents-table-container">
+                            <table class="incidents-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Titel</th>
+                                        <th>Owner</th>
+                                        <th>Status</th>
+                                        <th>Severity</th>
+                                        <th>Erstellt</th>
+                                        <th>Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incidentsTableBody">
+                                    <tr class="loading-row">
+                                        <td colspan="7" class="loading-cell">
+                                            <i class="fas fa-spinner fa-spin"></i> Lade Incidents...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="incidents-empty" id="incidentsEmpty" style="display: none;">
+                            <div class="empty-content">
+                                <i class="fas fa-clipboard-list"></i>
+                                <h3>Keine Incidents gefunden</h3>
+                                <p>Es sind derzeit keine Incidents vorhanden oder die Filter haben keine Ergebnisse zurückgegeben.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -398,6 +455,72 @@
                     </div>
                     <div id="settingsError" class="error-message" style="display: none;"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Incident Modal -->
+    <div id="createIncidentModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Neuen Incident erstellen</h3>
+                <button class="close-btn" id="closeCreateIncident">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createIncidentForm" class="incident-form">
+                    <div class="form-group">
+                        <label for="incidentTitle">Titel *</label>
+                        <input type="text" id="incidentTitle" name="title" required maxlength="255">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="incidentSeverity">Severity *</label>
+                            <select id="incidentSeverity" name="severity" required>
+                                <option value="">Bitte wählen...</option>
+                                <option value="1">Niedrig</option>
+                                <option value="2">Mittel</option>
+                                <option value="3">Hoch</option>
+                                <option value="4">Kritisch</option>
+                                <option value="5">Notfall</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="incidentStatus">Status *</label>
+                            <select id="incidentStatus" name="status" required>
+                                <option value="0">Offen</option>
+                                <option value="1">In Bearbeitung</option>
+                                <option value="2">Gelöst</option>
+                                <option value="3">Geschlossen</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="incidentApiText">API Text (JSON) *</label>
+                        <textarea id="incidentApiText" name="apiText" rows="4" required placeholder='{"description": "Beschreibung des Incidents", "source": "System", "priority": "high"}'></textarea>
+                        <small class="form-note">Geben Sie eine gültige JSON-Beschreibung des Incidents ein (darf nicht leer sein)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="incidentNotes">Notizen</label>
+                        <textarea id="incidentNotes" name="notes" rows="3" placeholder="Zusätzliche Notizen zum Incident..."></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" id="cancelCreateIncident" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Incident erstellen
+                        </button>
+                    </div>
+                    
+                    <div id="createIncidentSuccess" class="success-message" style="display: none;">
+                        Incident wurde erfolgreich erstellt!
+                    </div>
+                    <div id="createIncidentError" class="error-message" style="display: none;"></div>
+                </form>
             </div>
         </div>
     </div>

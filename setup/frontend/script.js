@@ -60,9 +60,9 @@ async function login(username, password) {
                 id: data.ID || data.Id || data.id || data.UserId || data.userId || 1,
                 username: data.UserName || data.userName || username,
                 name: data.UserName || data.userName || username,
-                email: data.email || `${username}@sims-ac.local`,
+                email: data.EMail || data.eMail || data.email || `${username}@sims-ac.local`,
                 role: data.role || 'user',
-                phone: data.phone || null,
+                phone: data.Telephone || data.telephone || data.phone || null,
                 profileImage: null
             };
             
@@ -550,46 +550,103 @@ function updateTopNavAvatar() {
 }
 
 // Profile Functions
-function loadUserProfile() {
+async function loadUserProfile() {
     if (!appState.currentUser) return;
     
-    const user = appState.currentUser;
-    
-    // Set form values
-    elements.profileUsername.value = user.username || '';
-    elements.profileEmail.value = user.email || '';
-    elements.profilePhone.value = user.phone || '';
-    
-    // Set avatar
-    if (user.profileImage) {
-        elements.profileAvatar.src = user.profileImage;
-        elements.profileAvatar.style.display = 'block';
-        elements.avatarPlaceholder.style.display = 'none';
-    } else {
-        elements.profileAvatar.style.display = 'none';
-        elements.avatarPlaceholder.style.display = 'flex';
+    try {
+        console.log('🔄 Loading user profile from API...');
+        
+        // Load user data from API
+        const response = await fetch(`${API_BASE_URL}/User/GetUserInfo/${appState.currentUser.id}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            console.log('User data from API:', userData);
+            console.log('Available properties:', Object.keys(userData));
+            
+            // Set form values using API data
+            console.log('Setting form values - UserName:', userData.UserName, 'EMail:', userData.EMail, 'Telephone:', userData.Telephone);
+            
+            elements.profileUsername.value = userData.UserName || userData.userName || '';
+            elements.profileEmail.value = userData.EMail || userData.eMail || userData.email || '';
+            elements.profilePhone.value = userData.Telephone || userData.telephone || userData.phone || '';
+            
+            // Update currentUser state with fresh data
+            appState.currentUser.username = userData.UserName || userData.userName;
+            appState.currentUser.email = userData.EMail || userData.eMail || userData.email;
+            appState.currentUser.phone = userData.Telephone || userData.telephone || userData.phone;
+            
+        } else {
+            console.error('Failed to load user profile:', response.status);
+            // Fallback to cached data
+            elements.profileUsername.value = appState.currentUser.username || '';
+            elements.profileEmail.value = appState.currentUser.email || '';
+            elements.profilePhone.value = appState.currentUser.phone || '';
+        }
+        
+        // Load profile image
+        await loadProfileImage();
+        
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+        // Fallback to cached data
+        elements.profileUsername.value = appState.currentUser.username || '';
+        elements.profileEmail.value = appState.currentUser.email || '';
+        elements.profilePhone.value = appState.currentUser.phone || '';
     }
 }
 
-async function updateUserProfile(profileData) {
+async function changePassword(currentPassword, newPassword) {
     try {
-        const response = await apiCall('/user/profile', {
+        console.log('🔄 Changing password for user ID:', appState.currentUser.id);
+        console.log('Current user object:', appState.currentUser);
+        
+        // Ensure we have a valid user ID
+        if (!appState.currentUser || !appState.currentUser.id) {
+            console.error('No valid user ID found');
+            return { success: false, error: 'Benutzer-ID nicht gefunden. Bitte neu anmelden.' };
+        }
+        
+        const passwordChangeData = {
+            id: parseInt(appState.currentUser.id), // Ensure it's a number
+            PasswordOld: currentPassword,
+            PasswordNew: newPassword
+        };
+        
+        console.log('Sending password change data:', passwordChangeData);
+        
+        const response = await fetch(`${API_BASE_URL}/User`, {
             method: 'PUT',
-            body: JSON.stringify(profileData)
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: JSON.stringify(passwordChangeData)
         });
 
-        if (response.success) {
-            // Update current user data
-            appState.currentUser = response.user;
-            elements.currentUser.textContent = response.user.name || response.user.username;
-            updateTopNavAvatar();
-            loadUserProfile();
+        if (response.ok) {
+            console.log('✅ Password changed successfully');
+            return { success: true };
+        } else {
+            const errorText = await response.text();
+            console.error('Password change failed:', errorText);
+            
+            if (errorText.includes('Password to weak')) {
+                return { success: false, error: 'Neues Passwort ist zu schwach' };
+            } else if (response.status === 401) {
+                return { success: false, error: 'Aktuelles Passwort ist falsch' };
+            } else {
+                return { success: false, error: 'Passwort konnte nicht geändert werden' };
+            }
         }
-
-        return response;
     } catch (error) {
-        console.error('Profile update error:', error);
-        return { success: false, error: 'Verbindungsfehler' };
+        console.error('Password change error:', error);
+        return { success: false, error: 'Verbindungsfehler beim Ändern des Passworts' };
     }
 }
 
@@ -808,9 +865,7 @@ function resetSettings() {
 }
 
 function loadGrafana() {
-    // Grafana is now opened in a new tab instead of iframe
-    // No iframe loading needed anymore
-    console.log('Grafana tab selected - use the "Grafana öffnen" button to access Grafana');
+    console.log('Grafana tab selected');
 }
 
 function toggleUserDropdown() {
@@ -1162,12 +1217,12 @@ function addIncidentActionListeners() {
         });
     });
     
-    // Details buttons (placeholder for future implementation)
+    // Details buttons - open incident details modal
     document.querySelectorAll('.incident-details').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const incidentId = parseInt(this.dataset.incidentId);
-            alert(`Details für Incident #${incidentId} - Coming soon!`);
+            showIncidentDetails(incidentId);
         });
     });
 }
@@ -1308,6 +1363,288 @@ function hideCreateIncidentModal() {
     elements.createIncidentModal.style.display = 'none';
 }
 
+// Incident Details Modal Functions
+async function showIncidentDetails(incidentId) {
+    try {
+        console.log('🔄 Loading incident details for ID:', incidentId);
+        
+        // Find incident in our cached data
+        const incident = appState.allIncidents.find(inc => 
+            inc && (inc.Id === incidentId || inc.id === incidentId)
+        );
+        
+        if (!incident) {
+            console.error('Incident not found:', incidentId);
+            return;
+        }
+        
+        const incidentData = mapIncidentProperties(incident);
+        
+        // Set modal title and basic info
+        elements.incidentModalTitle.textContent = `Security Incident #${incidentData.id}`;
+        
+        // Set status badge
+        const statusText = getStatusText(incidentData.status);
+        elements.incidentModalStatus.textContent = statusText;
+        elements.incidentModalStatus.className = `status-badge status-${incidentData.status}`;
+        
+        // Set severity badge
+        const severityText = getSeverityText(incidentData.severity);
+        elements.incidentModalSeverity.textContent = severityText;
+        elements.incidentModalSeverity.className = `severity-badge severity-${incidentData.severity}`;
+        
+        // Set basic fields
+        elements.detailIncidentId.value = `#${incidentData.id}`;
+        elements.detailTitle.value = incidentData.title;
+        elements.detailCreated.value = formatDate(incidentData.creationTime);
+        elements.detailStatus.value = incidentData.status;
+        elements.detailSeverity.value = incidentData.severity;
+        elements.detailNotes.value = incidentData.notesText || '';
+        
+        // Load owner name and show as text
+        if (incidentData.owner === 0) {
+            elements.detailOwner.value = 'Nicht zugewiesen';
+            elements.assignIncidentToMe.style.display = 'inline-block';
+        } else {
+            elements.detailOwner.value = 'Lädt...';
+            
+            // Load owner name asynchronously
+            const ownerName = await getUsernameById(incidentData.owner);
+            elements.detailOwner.value = ownerName;
+            
+            // Show "Assign to Me" button only if not already assigned to current user
+            if (incidentData.owner !== appState.currentUser.id) {
+                elements.assignIncidentToMe.style.display = 'inline-block';
+            } else {
+                elements.assignIncidentToMe.style.display = 'none';
+            }
+        }
+        
+        // Parse and display security details from API JSON
+        populateSecurityDetails(incidentData.apiText);
+        
+        // Store current incident for actions
+        elements.incidentDetailsModal.dataset.incidentId = incidentData.id;
+        
+        // Show modal
+        elements.incidentDetailsModal.style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Error loading incident details:', error);
+        showErrorMessage('Fehler beim Laden der Incident-Details');
+    }
+}
+
+function populateSecurityDetails(apiText) {
+    const grid = elements.securityDetailsGrid;
+    grid.innerHTML = '';
+    
+    try {
+        // Handle null, undefined, or empty apiText
+        if (!apiText || apiText.trim() === '') {
+            grid.innerHTML = '<div class="security-detail-item"><p style="color: #6b7280; text-align: center;">No security details available</p></div>';
+            return;
+        }
+        
+        const apiData = JSON.parse(apiText);
+        
+        // Check if apiData is valid
+        if (!apiData || typeof apiData !== 'object') {
+            grid.innerHTML = '<div class="security-detail-item"><p style="color: #6b7280; text-align: center;">No security details available</p></div>';
+            return;
+        }
+        
+        // Common security fields to display nicely
+        const fieldMapping = {
+            'source_ip': { label: 'Source IP', type: 'text', editable: true },
+            'destination_ip': { label: 'Destination IP', type: 'text', editable: true },
+            'user_agent': { label: 'User Agent', type: 'textarea', editable: false },
+            'request_method': { label: 'HTTP Method', type: 'text', editable: false },
+            'request_uri': { label: 'Request URI', type: 'textarea', editable: false },
+            'response_code': { label: 'Response Code', type: 'text', editable: false },
+            'timestamp': { label: 'Timestamp', type: 'text', editable: false },
+            'attack_type': { label: 'Attack Type', type: 'text', editable: true },
+            'country': { label: 'Country', type: 'text', editable: false },
+            'rule_id': { label: 'Rule ID', type: 'text', editable: false },
+            'message': { label: 'Message', type: 'textarea', editable: false },
+            'payload': { label: 'Payload', type: 'textarea', editable: false }
+        };
+        
+        // Display mapped fields
+        Object.keys(apiData).forEach(key => {
+            if (apiData[key] !== null && apiData[key] !== undefined && apiData[key] !== '') {
+                const config = fieldMapping[key] || { 
+                    label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
+                    type: 'text', 
+                    editable: false 
+                };
+                
+                createSecurityDetailField(key, apiData[key], config);
+            }
+        });
+        
+        // If no fields were created, show a message
+        if (grid.children.length === 0) {
+            grid.innerHTML = '<div class="security-detail-item"><p style="color: #6b7280; text-align: center;">No additional security details available</p></div>';
+        }
+        
+    } catch (error) {
+        console.error('Error parsing API data:', error);
+        grid.innerHTML = '<div class="security-detail-item"><p style="color: #ef4444; text-align: center;">Error parsing security data</p></div>';
+    }
+}
+
+function createSecurityDetailField(key, value, config) {
+    const grid = elements.securityDetailsGrid;
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = `security-detail-item ${config.editable ? '' : 'readonly'}`;
+    
+    let inputElement = '';
+    if (config.type === 'textarea') {
+        inputElement = `<textarea ${config.editable ? '' : 'readonly'} rows="3">${escapeHtml(value)}</textarea>`;
+    } else {
+        inputElement = `<input type="${config.type}" ${config.editable ? '' : 'readonly'} value="${escapeHtml(value)}">`;
+    }
+    
+    fieldDiv.innerHTML = `
+        <label>${config.label}</label>
+        ${inputElement}
+    `;
+    
+    // Store original key for potential updates
+    fieldDiv.dataset.fieldKey = key;
+    
+    grid.appendChild(fieldDiv);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function hideIncidentDetails() {
+    elements.incidentDetailsModal.style.display = 'none';
+    elements.incidentDetailSuccess.style.display = 'none';
+    elements.incidentDetailError.style.display = 'none';
+}
+
+async function saveIncidentChanges() {
+    const incidentId = parseInt(elements.incidentDetailsModal.dataset.incidentId);
+    
+    try {
+        console.log('🔄 Saving incident changes for ID:', incidentId);
+        
+        // Collect all changes
+        const changes = {
+            title: elements.detailTitle.value,
+            status: parseInt(elements.detailStatus.value),
+            severity: parseInt(elements.detailSeverity.value),
+            notes: elements.detailNotes.value
+        };
+        
+        // Collect editable security fields
+        const editableFields = {};
+        const securityFields = elements.securityDetailsGrid.querySelectorAll('.security-detail-item:not(.readonly)');
+        securityFields.forEach(field => {
+            const key = field.dataset.fieldKey;
+            const input = field.querySelector('input, textarea');
+            if (input && key) {
+                editableFields[key] = input.value;
+            }
+        });
+        
+        console.log('Changes to save:', changes);
+        console.log('Editable security fields:', editableFields);
+        
+        // For now, just show success since there's no update API yet
+        // TODO: Implement incident update API call here
+        
+        // Update cached data
+        const incident = appState.allIncidents.find(inc => 
+            inc && (inc.Id === incidentId || inc.id === incidentId)
+        );
+        if (incident) {
+            incident.Title = incident.title = changes.title;
+            incident.Status = incident.status = changes.status;
+            incident.Severity = incident.severity = changes.severity;
+            incident.NotesText = incident.notesText = changes.notes;
+        }
+        
+        // Refresh incidents table
+        displayIncidents(appState.allIncidents.filter(inc => inc !== null));
+        
+        // Update badges in modal
+        const statusText = getStatusText(changes.status);
+        elements.incidentModalStatus.textContent = statusText;
+        elements.incidentModalStatus.className = `status-badge status-${changes.status}`;
+        
+        const severityText = getSeverityText(changes.severity);
+        elements.incidentModalSeverity.textContent = severityText;
+        elements.incidentModalSeverity.className = `severity-badge severity-${changes.severity}`;
+        
+        elements.incidentDetailSuccess.textContent = 'Changes saved successfully!';
+        elements.incidentDetailSuccess.style.display = 'block';
+        elements.incidentDetailError.style.display = 'none';
+        
+        setTimeout(() => {
+            elements.incidentDetailSuccess.style.display = 'none';
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Error saving incident changes:', error);
+        elements.incidentDetailError.textContent = 'Fehler beim Speichern der Änderungen';
+        elements.incidentDetailError.style.display = 'block';
+        elements.incidentDetailSuccess.style.display = 'none';
+    }
+}
+
+async function assignIncidentToCurrentUser() {
+    const incidentId = parseInt(elements.incidentDetailsModal.dataset.incidentId);
+    
+    try {
+        console.log('🔄 Assigning incident to current user:', incidentId);
+        
+        const result = await assignIncident(incidentId);
+        
+        if (result.success) {
+            // Update the owner field with username
+            elements.detailOwner.value = appState.currentUser.username;
+            elements.assignIncidentToMe.style.display = 'none';
+            
+            // Update cached data
+            const incident = appState.allIncidents.find(inc => 
+                inc && (inc.Id === incidentId || inc.id === incidentId)
+            );
+            if (incident) {
+                incident.Owner = incident.owner = appState.currentUser.id;
+            }
+            
+            // Refresh incidents table
+            displayIncidents(appState.allIncidents.filter(inc => inc !== null));
+            
+            elements.incidentDetailSuccess.textContent = 'Incident erfolgreich zugewiesen!';
+            elements.incidentDetailSuccess.style.display = 'block';
+            elements.incidentDetailError.style.display = 'none';
+            
+            setTimeout(() => {
+                elements.incidentDetailSuccess.style.display = 'none';
+            }, 3000);
+            
+        } else {
+            elements.incidentDetailError.textContent = result.error;
+            elements.incidentDetailError.style.display = 'block';
+            elements.incidentDetailSuccess.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error assigning incident:', error);
+        elements.incidentDetailError.textContent = 'Fehler beim Zuweisen des Incidents';
+        elements.incidentDetailError.style.display = 'block';
+        elements.incidentDetailSuccess.style.display = 'none';
+    }
+}
+
 function showSuccessMessage(message) {
     // Create a temporary success notification
     const notification = document.createElement('div');
@@ -1424,7 +1761,27 @@ document.addEventListener('DOMContentLoaded', function() {
         closeCreateIncident: document.getElementById('closeCreateIncident'),
         cancelCreateIncident: document.getElementById('cancelCreateIncident'),
         createIncidentSuccess: document.getElementById('createIncidentSuccess'),
-        createIncidentError: document.getElementById('createIncidentError')
+        createIncidentError: document.getElementById('createIncidentError'),
+        
+        // Incident Details Modal
+        incidentDetailsModal: document.getElementById('incidentDetailsModal'),
+        closeIncidentDetails: document.getElementById('closeIncidentDetails'),
+        incidentModalTitle: document.getElementById('incidentModalTitle'),
+        incidentModalStatus: document.getElementById('incidentModalStatus'),
+        incidentModalSeverity: document.getElementById('incidentModalSeverity'),
+        detailIncidentId: document.getElementById('detailIncidentId'),
+        detailTitle: document.getElementById('detailTitle'),
+        detailOwner: document.getElementById('detailOwner'),
+        detailCreated: document.getElementById('detailCreated'),
+        detailStatus: document.getElementById('detailStatus'),
+        detailSeverity: document.getElementById('detailSeverity'),
+        securityDetailsGrid: document.getElementById('securityDetailsGrid'),
+        detailNotes: document.getElementById('detailNotes'),
+        assignIncidentToMe: document.getElementById('assignIncidentToMe'),
+        saveIncidentChanges: document.getElementById('saveIncidentChanges'),
+        cancelIncidentChanges: document.getElementById('cancelIncidentChanges'),
+        incidentDetailSuccess: document.getElementById('incidentDetailSuccess'),
+        incidentDetailError: document.getElementById('incidentDetailError')
     };
 
     // Login form submission
@@ -1626,7 +1983,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const newPassword = formData.get('newPassword');
         const confirmNewPassword = formData.get('confirmNewPassword');
         
-        // Validate password change if provided
+        let hasChanges = false;
+        let hasErrors = false;
+        
+        // Handle password change if provided
         if (newPassword || confirmNewPassword || currentPassword) {
             if (!currentPassword) {
                 elements.profileError.textContent = 'Aktuelles Passwort ist erforderlich';
@@ -1645,31 +2005,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 elements.profileError.style.display = 'block';
                 return;
             }
+            
+            // Change password
+            console.log('Attempting to change password...');
+            const passwordResult = await changePassword(currentPassword, newPassword);
+            
+            if (passwordResult.success) {
+                console.log('✅ Password changed successfully');
+                hasChanges = true;
+                
+                // Clear password fields
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
+            } else {
+                console.error('❌ Password change failed:', passwordResult.error);
+                elements.profileError.textContent = passwordResult.error;
+                elements.profileError.style.display = 'block';
+                hasErrors = true;
+            }
         }
-
-        // Get profile image if changed
-        let profileImage = appState.currentUser.profileImage;
+        
+        // Handle profile image change
         const imageFile = elements.profileImageInput.files[0];
         if (imageFile) {
-            profileImage = await getBase64(imageFile);
-        }
-
-        const profileData = {
-            username: formData.get('username'),
-            phone: formData.get('phone'),
-            profileImage: profileImage
-        };
-
-        // Add password if changing
-        if (newPassword) {
-            profileData.password = newPassword;
+            console.log('Uploading new profile image...');
+            const imageResult = await uploadProfileImage(imageFile);
+            
+            if (imageResult.success) {
+                console.log('✅ Profile image updated successfully');
+                hasChanges = true;
+            } else {
+                console.error('❌ Profile image upload failed:', imageResult.error);
+                if (!hasErrors) {
+                    elements.profileError.textContent = 'Profilbild konnte nicht hochgeladen werden: ' + imageResult.error;
+                    elements.profileError.style.display = 'block';
+                    hasErrors = true;
+                }
+            }
         }
         
-        const result = await updateUserProfile(profileData);
-        
-        if (result.success) {
+        // Show result
+        if (hasChanges && !hasErrors) {
             elements.profileError.style.display = 'none';
+            elements.profileSuccess.textContent = 'Profil wurde erfolgreich aktualisiert!';
             elements.profileSuccess.style.display = 'block';
+            
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                elements.profileSuccess.style.display = 'none';
+            }, 3000);
+        } else if (!hasChanges && !hasErrors) {
+            elements.profileError.textContent = 'Keine Änderungen vorgenommen';
+            elements.profileError.style.display = 'block';
+        }
             
             // Clear password fields
             document.getElementById('currentPassword').value = '';
@@ -1679,11 +2068,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 elements.profileSuccess.style.display = 'none';
             }, 3000);
-        } else {
-            elements.profileError.textContent = result.error;
-            elements.profileError.style.display = 'block';
-            elements.profileSuccess.style.display = 'none';
-        }
     });
 
     // Profile image upload
@@ -1997,6 +2381,44 @@ window.addEventListener('load', function() {
     // No valid token or session - show login screen
     console.log('No valid session found, showing login screen');
     showAuthScreen();
+});
+
+// Incident Details Modal Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Close incident details modal
+    elements.closeIncidentDetails.addEventListener('click', function() {
+        hideIncidentDetails();
+    });
+    
+    // Save changes button
+    elements.saveIncidentChanges.addEventListener('click', function() {
+        saveIncidentChanges();
+    });
+    
+    // Cancel changes
+    elements.cancelIncidentChanges.addEventListener('click', function() {
+        hideIncidentDetails();
+    });
+    
+    // Assign incident to me
+    elements.assignIncidentToMe.addEventListener('click', function() {
+        assignIncidentToCurrentUser();
+    });
+    
+    // Close modal when clicking outside
+    elements.incidentDetailsModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideIncidentDetails();
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && elements.incidentDetailsModal.style.display === 'flex') {
+            hideIncidentDetails();
+        }
+    });
+    // Additional initialization can be added here
 });
 
 // Export functions for debugging (remove in production)

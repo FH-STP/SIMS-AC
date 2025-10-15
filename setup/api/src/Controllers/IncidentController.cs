@@ -111,7 +111,7 @@ public class IncidentController : ControllerBase
     }
 
     [HttpDelete(Name = "DisableIncident")]
-    public IActionResult DisableIncident([FromBody] int id)
+    public IActionResult DisableIncident(int id)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET IsDisabled=1 WHERE ID=@ID;";
@@ -128,7 +128,7 @@ public class IncidentController : ControllerBase
     }
 
     [HttpPut("Escalate")]
-    public IActionResult Escalate([FromBody] int id, int severity)
+    public IActionResult Escalate(int id, int severity)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET Severity=@Severity WHERE ID=@ID;";
@@ -147,7 +147,7 @@ public class IncidentController : ControllerBase
     }
 
     [HttpPut("ChangeStatus")]
-    public IActionResult ChangeStatus([FromBody] int id, int Status)
+    public IActionResult ChangeStatus(int id, int Status)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET Status=@Status WHERE ID=@ID;";
@@ -166,7 +166,7 @@ public class IncidentController : ControllerBase
     }
 
     [HttpPut("ChangeConclusion")]
-    public IActionResult ChangeConclusion([FromBody] int id, int ConclusionID)
+    public IActionResult ChangeConclusion(int id, int ConclusionID)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET ConclusionID=@ConclusionID WHERE ID=@ID;";
@@ -185,7 +185,7 @@ public class IncidentController : ControllerBase
     }
 
     [HttpPut("ChangeNotes")]
-    public IActionResult ChangeNotes([FromBody] int id, string notes)
+    public IActionResult ChangeNotes(int id, string notes)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET Notes_Text=@Notes_Text WHERE ID=@ID";
@@ -204,7 +204,7 @@ public class IncidentController : ControllerBase
     }
 
     [HttpPut("Assign")]
-    public IActionResult Assign([FromBody] int id, int owner)
+    public IActionResult Assign(int id, int owner)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET OwnerID=@OwnerID WHERE ID=@ID";
@@ -223,7 +223,7 @@ public class IncidentController : ControllerBase
     }
     
     [HttpPost("Link")]
-    public IActionResult Link([FromBody] int parrentID, int childID)
+    public IActionResult Link(int parrentID, int childID)
     {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "INSERT INTO Incident_Links (Main_IncidentID, Sub_IncidentID) VALUES (@parrentID, @childID);";

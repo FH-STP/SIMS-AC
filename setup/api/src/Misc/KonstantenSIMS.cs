@@ -31,7 +31,7 @@ namespace sims.Misc
 
 
         public const String uri1 = "mongodb://";
-        public const String uri2 = "mongodb://simsadmin:YourStrong!MongoPa55word@localhost:27017/admin";
+        public const String uri2 = "@localhost:27017/admin";
 
         public static String uri()
         {

@@ -97,6 +97,7 @@ services:
     environment:
       - SA_PASSWORD=${SQL_PASSWORD} # Passes the password to the datasource config
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_ALLOW_EMBEDDING=true
     volumes:
       # Persistent storage for Grafana's internal database
       - ./data/grafana:/var/lib/grafana

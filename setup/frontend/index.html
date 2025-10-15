@@ -238,8 +238,15 @@
                                     <option value="5">Notfall</option>
                                 </select>
                             </div>
+                            <div class="filter-group">
+                                <label for="searchFilter">Suche:</label>
+                                <input type="text" id="searchFilter" class="filter-input" placeholder="Nach Titel suchen...">
+                            </div>
                             <button id="refreshIncidents" class="btn btn-secondary">
                                 <i class="fas fa-sync-alt"></i> Aktualisieren
+                            </button>
+                            <button id="clearFilters" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Filter löschen
                             </button>
                         </div>
                         
@@ -247,12 +254,24 @@
                             <table class="incidents-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Titel</th>
-                                        <th>Owner</th>
-                                        <th>Status</th>
-                                        <th>Severity</th>
-                                        <th>Erstellt</th>
+                                        <th class="sortable" data-field="id">
+                                            ID <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th class="sortable" data-field="title">
+                                            Titel <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th class="sortable" data-field="owner">
+                                            Owner <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th class="sortable" data-field="status">
+                                            Status <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th class="sortable" data-field="severity">
+                                            Severity <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th class="sortable" data-field="creationTime">
+                                            Erstellt <i class="fas fa-sort"></i>
+                                        </th>
                                         <th>Aktionen</th>
                                     </tr>
                                 </thead>

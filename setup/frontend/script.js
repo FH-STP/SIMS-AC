@@ -11,7 +11,12 @@ const appState = {
         incidentNotifications: true,
         systemNotifications: false,
         securityNotifications: true
-    }
+    },
+    // Incident management state
+    allIncidents: [], // Store all loaded incidents for filtering/sorting
+    usersCache: {}, // Cache for user ID to username mapping
+    currentSort: { field: 'id', direction: 'desc' }, // Default sort
+    currentFilters: { status: '', severity: '', search: '' }
 };
 
 // DOM Elements - will be initialized after DOM is loaded
@@ -49,15 +54,19 @@ async function login(username, password) {
             }
             
             // Create user object from response
+            console.log('Login API response:', data);
+            
             const user = {
-                id: data.ID || 1,
-                username: data.UserName || username,
-                name: data.UserName || username,
+                id: data.ID || data.Id || data.id || data.UserId || data.userId || 1,
+                username: data.UserName || data.userName || username,
+                name: data.UserName || data.userName || username,
                 email: data.email || `${username}@sims-ac.local`,
                 role: data.role || 'user',
                 phone: data.phone || null,
                 profileImage: null
             };
+            
+            console.log('Created user object:', user);
             
             appState.isLoggedIn = true;
             appState.currentUser = user;
@@ -353,6 +362,43 @@ async function register(userData) {
         if (response.ok) {
             console.log('✅ User creation successful');
             
+            // If profile image is provided, upload it
+            if (userData.profileImage) {
+                try {
+                    console.log('📸 Uploading profile image for new user...');
+                    
+                    // Login with the new user credentials to get proper session
+                    const loginResult = await login(userData.username, userData.password);
+                    
+                    if (loginResult.success) {
+                        // Convert base64 to file object
+                        const base64Response = await fetch(userData.profileImage);
+                        const blob = await base64Response.blob();
+                        const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+                        
+                        // Use the same upload logic as in profile tab
+                        const uploadResult = await uploadProfileImage(file);
+                        
+                        if (uploadResult.success) {
+                            console.log('✅ Profile image uploaded successfully');
+                        } else {
+                            console.warn('❌ Profile image upload failed:', uploadResult.error);
+                        }
+                        
+                        // Logout the new user (we're still in admin context)
+                        appState.isLoggedIn = false;
+                        appState.currentUser = null;
+                        localStorage.removeItem('jwt_token');
+                        sessionStorage.removeItem('simsAcSession');
+                    } else {
+                        console.warn('Could not login new user to upload profile image');
+                    }
+                } catch (imageError) {
+                    console.error('Error handling profile image:', imageError);
+                    // Don't fail the whole registration if image upload fails
+                }
+            }
+            
             // Clear admin token after successful user creation
             appState.adminAuthenticatedForRegistration = false;
             appState.adminTokenForRegistration = null;
@@ -454,6 +500,9 @@ function showDashboard() {
     
     // Show default tab (Grafana)
     switchTab('grafana');
+    
+    // Initialize sort icons
+    updateSortIcons();
     
     // Add fade-in animation
     elements.dashboard.classList.add('fade-in');
@@ -804,7 +853,26 @@ async function loadIncidents() {
         if (response.ok) {
             const incidents = await response.json();
             console.log('✅ Incidents loaded:', incidents);
-            displayIncidents(incidents);
+            console.log('� Total incidents received:', incidents ? incidents.length : 0);
+            
+            // Debug: Count null values
+            if (incidents) {
+                const nullCount = incidents.filter(i => i === null || i === undefined).length;
+                const validCount = incidents.filter(i => i !== null && i !== undefined).length;
+                console.log('📋 Valid incidents:', validCount, 'Null incidents:', nullCount);
+                
+                // Show first valid incident
+                const firstValid = incidents.find(i => i !== null && i !== undefined);
+                if (firstValid) {
+                    console.log('📋 First valid incident sample:', firstValid);
+                    console.log('🔍 Incident properties:', Object.keys(firstValid));
+                }
+            }
+            
+            // Store incidents in state (filter out null values) and apply current filters/sorting
+            appState.allIncidents = (incidents || []).filter(incident => incident !== null && incident !== undefined);
+            console.log('💾 Stored valid incidents:', appState.allIncidents.length);
+            filterAndSortIncidents();
         } else {
             console.error('Failed to load incidents:', response.status);
             tbody.innerHTML = `
@@ -838,43 +906,218 @@ function displayIncidents(incidents) {
     
     elements.incidentsEmpty.style.display = 'none';
     
-    tbody.innerHTML = incidents.map(incident => {
+    // Create incident rows (with placeholders for usernames)
+    const incidentRows = incidents.map(incident => {
         if (!incident) return '';
         
-        const statusText = getStatusText(incident.Status);
-        const severityText = getSeverityText(incident.Severity);
-        const ownerText = incident.Owner === 0 ? 'Nicht zugewiesen' : `User ${incident.Owner}`;
-        const isUnassigned = incident.Owner === 0;
+        // Map properties to handle both PascalCase and camelCase
+        const incidentData = mapIncidentProperties(incident);
+        
+        // Skip if mapping failed
+        if (!incidentData) return '';
+        
+        const statusText = getStatusText(incidentData.status);
+        const severityText = getSeverityText(incidentData.severity);
+        const isUnassigned = incidentData.owner === 0;
         
         return `
-            <tr class="incident-row" data-incident-id="${incident.Id}">
-                <td class="incident-id">#${incident.Id}</td>
-                <td class="incident-title" title="${incident.Title}">${incident.Title}</td>
-                <td class="incident-owner ${isUnassigned ? 'unassigned' : ''}">${ownerText}</td>
+            <tr class="incident-row" data-incident-id="${incidentData.id}">
+                <td class="incident-id">#${incidentData.id}</td>
+                <td class="incident-title" title="${incidentData.title}">${incidentData.title}</td>
+                <td class="incident-owner ${isUnassigned ? 'unassigned' : ''}" data-owner-id="${incidentData.owner}">
+                    ${isUnassigned ? 'Nicht zugewiesen' : 'Lädt...'}
+                </td>
                 <td class="incident-status">
-                    <span class="status-badge status-${incident.Status}">${statusText}</span>
+                    <span class="status-badge status-${incidentData.status}">${statusText}</span>
                 </td>
                 <td class="incident-severity">
-                    <span class="severity-badge severity-${incident.Severity}">${severityText}</span>
+                    <span class="severity-badge severity-${incidentData.severity}">${severityText}</span>
                 </td>
-                <td class="incident-created">${formatDate(incident.CreationTime)}</td>
+                <td class="incident-created">${formatDate(incidentData.creationTime)}</td>
                 <td class="incident-actions">
                     ${isUnassigned ? 
-                        `<button class="btn-small btn-primary assign-to-me" data-incident-id="${incident.Id}" title="Mir zuweisen">
+                        `<button class="btn-small btn-primary assign-to-me" data-incident-id="${incidentData.id}" title="Mir zuweisen">
                             <i class="fas fa-hand-paper"></i>
                         </button>` 
                         : ''
                     }
-                    <button class="btn-small btn-secondary incident-details" data-incident-id="${incident.Id}" title="Details anzeigen">
+                    <button class="btn-small btn-secondary incident-details" data-incident-id="${incidentData.id}" title="Details anzeigen">
                         <i class="fas fa-eye"></i>
                     </button>
                 </td>
             </tr>
         `;
-    }).join('');
+    });
+
+    tbody.innerHTML = incidentRows.join('');
+    
+    // Load usernames asynchronously
+    loadIncidentOwnerNames();
     
     // Add event listeners for action buttons
     addIncidentActionListeners();
+}
+
+async function loadIncidentOwnerNames() {
+    const ownerCells = document.querySelectorAll('.incident-owner[data-owner-id]');
+    
+    for (const cell of ownerCells) {
+        const ownerId = parseInt(cell.dataset.ownerId);
+        if (ownerId === 0) continue; // Skip unassigned
+        
+        const username = await getUsernameById(ownerId);
+        cell.textContent = username;
+    }
+}
+
+// Helper function to map incident properties (handles both PascalCase and camelCase)
+function mapIncidentProperties(incident) {
+    // Return null for invalid incidents
+    if (!incident || typeof incident !== 'object') {
+        return null;
+    }
+    
+    return {
+        id: incident.Id || incident.id || 0,
+        owner: incident.Owner || incident.owner || 0,
+        creator: incident.Creator || incident.creator || 0,
+        title: incident.Title || incident.title || 'Unbekannt',
+        apiText: incident.APIText || incident.apiText || '{}',
+        notesText: incident.NotesText || incident.notesText || '',
+        severity: incident.Severity || incident.severity || 1,
+        conclusion: incident.Conclusion || incident.conclusion || 0,
+        status: incident.Status || incident.status || 0,
+        creationTime: incident.CreationTime || incident.creationTime || new Date().toISOString(),
+        isDisabled: incident.IsDisabled || incident.isDisabled || false
+    };
+}
+
+// User caching and lookup functions
+async function getUsernameById(userId) {
+    if (userId === 0) return 'Nicht zugewiesen';
+    
+    // Check cache first
+    if (appState.usersCache[userId]) {
+        return appState.usersCache[userId];
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/User/GetUserInfo/${userId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const user = await response.json();
+            const username = user.userName || user.UserName || user.username || `User ${userId}`;
+            // Cache the username
+            appState.usersCache[userId] = username;
+            return username;
+        } else {
+            return `User ${userId}`;
+        }
+    } catch (error) {
+        console.error('Error fetching user info:', error);
+        return `User ${userId}`;
+    }
+}
+
+// Incident filtering, sorting and search functions
+function filterAndSortIncidents() {
+    let filteredIncidents = [...appState.allIncidents];
+    
+    // Apply status filter
+    if (appState.currentFilters.status !== '') {
+        const statusValue = parseInt(appState.currentFilters.status);
+        filteredIncidents = filteredIncidents.filter(incident => {
+            const incidentData = mapIncidentProperties(incident);
+            return incidentData && incidentData.status === statusValue;
+        });
+    }
+    
+    // Apply severity filter
+    if (appState.currentFilters.severity !== '') {
+        const severityValue = parseInt(appState.currentFilters.severity);
+        filteredIncidents = filteredIncidents.filter(incident => {
+            const incidentData = mapIncidentProperties(incident);
+            return incidentData && incidentData.severity === severityValue;
+        });
+    }
+    
+    // Apply search filter
+    if (appState.currentFilters.search !== '') {
+        const searchTerm = appState.currentFilters.search.toLowerCase();
+        filteredIncidents = filteredIncidents.filter(incident => {
+            const incidentData = mapIncidentProperties(incident);
+            return incidentData && incidentData.title.toLowerCase().includes(searchTerm);
+        });
+    }
+    
+    // Apply sorting
+    filteredIncidents.sort((a, b) => {
+        const aData = mapIncidentProperties(a);
+        const bData = mapIncidentProperties(b);
+        
+        // Skip if mapping failed
+        if (!aData || !bData) return 0;
+        
+        let aValue = aData[appState.currentSort.field];
+        let bValue = bData[appState.currentSort.field];
+        
+        // Handle different data types
+        if (appState.currentSort.field === 'creationTime') {
+            aValue = new Date(aValue);
+            bValue = new Date(bValue);
+        } else if (typeof aValue === 'string') {
+            aValue = aValue.toLowerCase();
+            bValue = bValue.toLowerCase();
+        }
+        
+        let result = 0;
+        if (aValue < bValue) result = -1;
+        if (aValue > bValue) result = 1;
+        
+        return appState.currentSort.direction === 'desc' ? -result : result;
+    });
+    
+    displayIncidents(filteredIncidents);
+}
+
+function setSortField(field) {
+    if (appState.currentSort.field === field) {
+        // Toggle direction if same field
+        appState.currentSort.direction = appState.currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New field, default to ascending
+        appState.currentSort.field = field;
+        appState.currentSort.direction = 'asc';
+    }
+    
+    updateSortIcons();
+    filterAndSortIncidents();
+}
+
+function updateSortIcons() {
+    // Reset all sort icons
+    document.querySelectorAll('.sortable i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+    });
+    
+    // Set active sort icon
+    const activeHeader = document.querySelector(`[data-field="${appState.currentSort.field}"] i`);
+    if (activeHeader) {
+        activeHeader.className = appState.currentSort.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
+}
+
+function clearAllFilters() {
+    appState.currentFilters = { status: '', severity: '', search: '' };
+    elements.statusFilter.value = '';
+    elements.severityFilter.value = '';
+    elements.searchFilter.value = '';
+    filterAndSortIncidents();
 }
 
 function getStatusText(status) {
@@ -997,6 +1240,7 @@ async function createTestIncidents() {
 async function createIncident(incidentData) {
     try {
         console.log('🔄 Creating new incident...', incidentData);
+        console.log('Current user:', appState.currentUser);
         
         if (!appState.currentUser) {
             console.error('No current user found');
@@ -1172,7 +1416,9 @@ document.addEventListener('DOMContentLoaded', function() {
         incidentsEmpty: document.getElementById('incidentsEmpty'),
         statusFilter: document.getElementById('statusFilter'),
         severityFilter: document.getElementById('severityFilter'),
+        searchFilter: document.getElementById('searchFilter'),
         refreshIncidents: document.getElementById('refreshIncidents'),
+        clearFilters: document.getElementById('clearFilters'),
         createIncidentModal: document.getElementById('createIncidentModal'),
         createIncidentForm: document.getElementById('createIncidentForm'),
         closeCreateIncident: document.getElementById('closeCreateIncident'),
@@ -1604,18 +1850,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add incident filters (placeholder for future implementation)
+    // Incident filters and search
     elements.statusFilter.addEventListener('change', function() {
-        // TODO: Implement filtering
-        if (appState.currentTab === 'incidents') {
-            loadIncidents();
-        }
+        appState.currentFilters.status = this.value;
+        filterAndSortIncidents();
     });
 
     elements.severityFilter.addEventListener('change', function() {
-        // TODO: Implement filtering  
-        if (appState.currentTab === 'incidents') {
-            loadIncidents();
+        appState.currentFilters.severity = this.value;
+        filterAndSortIncidents();
+    });
+
+    elements.searchFilter.addEventListener('input', function() {
+        appState.currentFilters.search = this.value;
+        filterAndSortIncidents();
+    });
+
+    elements.clearFilters.addEventListener('click', function() {
+        clearAllFilters();
+    });
+
+    // Add sort listeners to table headers
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.sortable')) {
+            const header = e.target.closest('.sortable');
+            const field = header.dataset.field;
+            setSortField(field);
         }
     });
 

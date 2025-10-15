@@ -60,7 +60,7 @@ services:
       - "5321:5321"
     environment:
       - ASPNETCORE_URLS=http://+:5321
-      - SQL_CONNECTION_STRING=Server=sql-db;Database=SIMS;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False
+      - SQL_CONNECTION_STRING=Data Source=sql-db,1433;Initial Catalog=SIMS;User ID=sa;Password=${SQL_PASSWORD};Encrypt=False
       - MONGO_CONNECTION_STRING=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo-db:27017/sims
     depends_on:
       sql-db:

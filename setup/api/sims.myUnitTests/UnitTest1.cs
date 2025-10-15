@@ -6,6 +6,7 @@ namespace sims.myUnitTests;
 
 public class UnitTest1
 {
+    // Für Unit tests bitte in SIMS-AC/setup/api/src/Misc im Konstantenfile bitte die nötigen Anpassungen für Unit tests machen
     [Fact]
     public void Test1()
     {

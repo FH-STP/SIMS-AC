@@ -27,12 +27,12 @@ public class AccountController : ControllerBase
     [HttpPost("Login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-
+        //throw new Exception(KonstantenSIMS.DbConnectionStringBuilder());
         UserController myUsers = new UserController();
         int UserID = 0;
         String Role = "";
 
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         var sqlRead = "SELECT ID, Is_Admin, IsDisabled FROM Users WHERE Username= @Name;";
 
         // Get ID

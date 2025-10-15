@@ -42,7 +42,7 @@ public class UserController : ControllerBase
         {
             return BadRequest("Password to weak!");
         }
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         var PWHash = argon2Hasher.DeriveBytes(user.Password, Convert.FromHexString(salt), 256);
         var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin, Telephone,EMail) VALUES (@Username, @HASH, @SALT, @isAdmin, @Telephone, @Email);";
 
@@ -75,7 +75,7 @@ public class UserController : ControllerBase
     {
         Random rnd = new Random();
         var argon2Hasher = getArgon2idHasher();
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
 
         String str = "ABCDEF0123456789";
         int size = 32;
@@ -135,7 +135,7 @@ public class UserController : ControllerBase
         Logging.loglog(0, "User: " + id + " was attempted to be disabled");
         try
         {
-            var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+            var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
             var sql = "UPDATE Users SET IsDisabled=1 WHERE ID=@ID;";
 
             conn.Open();
@@ -175,7 +175,7 @@ public class UserController : ControllerBase
     [HttpPost("UploadPicture")]
     public async Task<IActionResult> UploadPicture(IFormFile file)
     {
-        var client = new MongoClient(KonstantenSIMS.uri);
+        var client = new MongoClient(KonstantenSIMS.uri());
         var database = client.GetDatabase("sims");
 
         if (!CollectionExists(database, "profilePic"))
@@ -191,7 +191,7 @@ public class UserController : ControllerBase
 
         // Get ID
         int UserIDs = 0;
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         var sqlRead = "SELECT ID, Is_Admin, IsDisabled FROM Users WHERE Username= @Name;";
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -241,7 +241,7 @@ public class UserController : ControllerBase
 
         // Get ID
         int UserIDs = 0;
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         var sqlRead = "SELECT ID, Is_Admin, IsDisabled FROM Users WHERE Username= @Name;";
         conn.Open();
         var Command = new SqlCommand(sqlRead, conn);
@@ -259,7 +259,7 @@ public class UserController : ControllerBase
 
 
         //MongoDB
-        var client = new MongoClient(KonstantenSIMS.uri);
+        var client = new MongoClient(KonstantenSIMS.uri());
         var database = client.GetDatabase("sims");
         var collection = database.GetCollection<BsonDocument>("profilePic");
 
@@ -290,7 +290,7 @@ public class UserController : ControllerBase
 
     public static User? GetUserInfoFromDB(int id)
     {
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         var sqlRead = "SELECT ID, Username, EMail, Telephone, Is_Admin, IsDisabled FROM Users";
 
         conn.Open();
@@ -318,7 +318,7 @@ public class UserController : ControllerBase
     {
         Random rnd = new Random();
         var argon2Hasher = getArgon2idHasher();
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
 
         //Veryfy Password
         Boolean isPWCorrect = false;
@@ -424,7 +424,7 @@ public class UserController : ControllerBase
             var PWHash = argon2Hasher.DeriveBytes("pass", Convert.FromHexString("00112233445566778899AABBCCDDEEFF"), 256);
 
 
-            await using var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+            await using var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
             var SQLInsert = "INSERT INTO Users (Username, PasswordHash, PasswordSalt, Is_Admin) VALUES ('niklas" + Convert.ToString(rnd.Next(0, 9)) + "', '" + Convert.ToHexString(PWHash) + "', '" + "SALT" + "', 1);";
             var sqlRead = "SELECT ID, Username, PasswordHash, PasswordSalt FROM Users";
             conn.Open();

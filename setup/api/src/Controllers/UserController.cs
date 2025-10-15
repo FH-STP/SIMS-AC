@@ -114,6 +114,19 @@ public class UserController : ControllerBase
     [HttpDelete(Name = "DisableUser")]
     public IActionResult DisableUser([FromBody] int id)
     {
+        try
+        {
+            Boolean disabled = DisableUserInDB(id);
+        }
+        catch
+        {
+            return BadRequest("Check API for more Info!");
+        }
+        return Accepted();
+    }
+
+    public static Boolean DisableUserInDB(int id)
+    {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Users SET IsDisabled=1 WHERE ID=@ID;";
 
@@ -124,9 +137,7 @@ public class UserController : ControllerBase
         Command.ExecuteNonQuery();
         conn.Close();
 
-        //return BadRequest();
-        return Accepted();
-        //return NoContent();
+        return true;
     }
 
     [HttpGet("GetUserInfo/{id}")]
@@ -324,7 +335,7 @@ public class UserController : ControllerBase
         return PasswordBasedKeyDerivationAlgorithm.Argon2id(argon2Parameters);
     }
 
-    private static Boolean checkPWRequriements(String PotentialPassword)
+    public static Boolean checkPWRequriements(String PotentialPassword)
     {
         int requirements = 0;
         if (Regex.IsMatch(PotentialPassword, "[a-z]"))

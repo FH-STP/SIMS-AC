@@ -71,10 +71,10 @@ public class Program
             };
         });
         builder.Services.AddAuthorization(options =>
-    {
-        options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
-        options.AddPolicy("UserPolicy", policy => policy.RequireRole("User"));
-    });
+        {
+            options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
+            options.AddPolicy("UserPolicy", policy => policy.RequireRole("User"));
+        });
 
         builder.Services.AddScoped<sims.Services.JwtService>();
 

@@ -18,6 +18,9 @@ public class IncidentController : ControllerBase
     [HttpGet("GetIncidentInfo/{id}")]
     public IActionResult GetIncidentInfo(int id)
     {
+        int conclusio = -1;
+        String notes = "";
+        String apiText = "";
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents;";
 
@@ -29,13 +32,34 @@ public class IncidentController : ControllerBase
         {
             while (reader.Read())
             {
-                if (reader.GetInt32(0) == id)
+                try
                 {
-                    Incident Result = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
-                  reader.GetString(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
-                    conn.Close();
-                    return Ok(Result);
+                    conclusio = reader.GetInt32(7);
                 }
+                catch
+                {
+                    conclusio = -2;
+                }
+                try
+                {
+                    notes = reader.GetString(5);
+                }
+                catch
+                {
+                    notes = "null";
+                }
+                try
+                {
+                    apiText = reader.GetString(4);
+                }
+                catch
+                {
+                    apiText = "null";
+                }
+                Incident Result = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), apiText, notes
+                , reader.GetInt32(6), conclusio, reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
+                conn.Close();
+                return Ok(Result);
             }
         }
 
@@ -49,6 +73,9 @@ public class IncidentController : ControllerBase
     {
         Incident[] incidentList = new Incident[25];
         int iterator = 0;
+        int conclusio = -1;
+        String notes = "";
+        String apiText = "";
 
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sqlRead = "SELECT ID, OwnerID, CreatorID, Title, API_Text, Notes_Text, Severity, ConclusionID, Status, Creation_Time, IsDisabled FROM Incidents WHERE IsDisabled=0 ORDER BY id DESC;";
@@ -61,8 +88,32 @@ public class IncidentController : ControllerBase
         {
             while (reader.Read() && (iterator < 25))
             {
-                incidentList[iterator] = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4),
-                  reader.GetString(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
+                try
+                {
+                    conclusio = reader.GetInt32(7);
+                }
+                catch
+                {
+                    conclusio = -2;
+                }
+                try
+                {
+                    notes = reader.GetString(5);
+                }
+                catch
+                {
+                    notes = "null";
+                }
+                try
+                {
+                    apiText = reader.GetString(4);
+                }
+                catch
+                {
+                    apiText = "null";
+                }
+                incidentList[iterator] = new Incident(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), apiText, notes
+                , reader.GetInt32(6), conclusio, reader.GetInt32(8), reader.GetDateTime(9), reader.GetBoolean(10));
                 iterator++;
             }
         }
@@ -75,11 +126,24 @@ public class IncidentController : ControllerBase
     [HttpPost(Name = "CreateIncident")]
     public IActionResult CreateIncident([FromBody] Incident incident)
     {
+        try
+        {
+            CreateIncidentDB(incident);
+            return Ok();
+        }
+        catch
+        {
+            return BadRequest("Check API for more Info!");
+        }
+    }
+    
+    public static void CreateIncidentDB(Incident incident)
+    {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var SQLInsert = "INSERT INTO Incidents (OwnerID, CreatorID, Title, API_Text,Creation_Time,Severity,Status,Notes_Text,ConclusionID,IsDisabled) VALUES (" +
         "@Owner, @Creator, @Title, @API_Text, @TimeNow, @Severity, @Status, @Notes, @Conclusio, @IsItDisabled);";
-        
-        
+
+
         conn.Open();
         var Command = new SqlCommand(SQLInsert, conn);
 
@@ -106,8 +170,6 @@ public class IncidentController : ControllerBase
 
         Command.ExecuteNonQuery();
         conn.Close();
-
-        return CreatedAtAction(nameof(CreateIncident), new { id = incident.Id }, incident);
     }
 
     [HttpDelete(Name = "DisableIncident")]
@@ -272,12 +334,18 @@ public class IncidentController : ControllerBase
     [HttpPost("InserTestInfoIncidents")]
     public async Task<IActionResult> InserTestInfoIncidents()
     {
+        InserTestIncidents();
+        return Ok();
+    }
+
+    public static void InserTestIncidents()
+    {
         for (int iterator = 0; iterator < 30; iterator++)
         {
-            CreateIncident(new Incident(0, 1, 1, "Danger Shai Hulud", "{\"text" + "\": \"Shai Hulud has infected Host X\"}", "", 5, 1, 0, DateTime.Now, false));
-            CreateIncident(new Incident(0, 1, 1, "Scan", "{\"text" + "\": \"Host X was Scanned\"}", "", 3, 1, 0, DateTime.Now, false));
+            CreateIncidentDB(new Incident(0, 1, 1, "Danger Shai Hulud", "{\"text" + "\": \"Shai Hulud has infected Host X\"}", "", 5, 1, 0, DateTime.Now, false));
+            CreateIncidentDB(new Incident(0, 1, 1, "Scan", "{\"text" + "\": \"Host X was Scanned\"}", "", 3, 1, 0, DateTime.Now, false));
         }
-        return Ok();
+        return;
     }
 }
 

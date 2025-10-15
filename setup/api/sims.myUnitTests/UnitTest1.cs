@@ -10,12 +10,15 @@ public class UnitTest1
     public void Test1()
     {
         Assert.Equal(1, 1);
+        Console.WriteLine("Test 1 Passed!");
+
     }
 
     [Fact]
     public async Task TestCheckPWFunction()
     {
         Assert.True(UserController.verifyPW(1, "admin123!"));
+        Console.WriteLine("Test 2 Passed!");
     }
 
     [Fact]
@@ -28,6 +31,7 @@ public class UnitTest1
         Assert.Equal("admin", admin.UserName);
         Assert.Equal("placeholder@test.at", admin.EMail);
         Assert.Equal("12345678", admin.Telephone);
+        Console.WriteLine("Test 3 Passed!");
     }
 
     [Fact]
@@ -45,12 +49,14 @@ public class UnitTest1
         Assert.False(UserController.checkPWRequriements("lalaLAGA"));
         Assert.False(UserController.checkPWRequriements("kurz"));
         Assert.False(UserController.checkPWRequriements("lllllllllllllllllllaaaaaaaaaaaaaaaaannnnnnnnnnnnnnngggggggggggg"));
+        Console.WriteLine("Test 4 Passed!");
     }
 
     [Fact]
     public async Task DisableUser()
     {
-        Assert.False(UserController.DisableUserInDB(1122));
+        Assert.False(UserController.DisableUserInDB(1122)); // Den User gibt es nicht, wird nicht erzeugt, Unit Test crashed statt false
+        Console.WriteLine("Test 5 Passed!");
     }
 
     [Fact]
@@ -60,12 +66,7 @@ public class UnitTest1
         Assert.Equal("2 False Positiv False False ", ConclusionController.ConclusionInfo(2));
         Assert.Equal("3 False Positiv - Info False True ", ConclusionController.ConclusionInfo(3));
         Assert.Equal("4 True Positiv - Scan True True ", ConclusionController.ConclusionInfo(4));
-    }
-
-    //TODO Create Incident
-    public async Task ConclusionInformaion()
-    {
-        Assert.Equal("1 System - Empty False False ", ConclusionController.ConclusionInfo(1));
+        Console.WriteLine("Test 6 Passed!");
     }
 
     [Fact]
@@ -81,12 +82,20 @@ public class UnitTest1
             wentWell = false;
         }
         Assert.True(wentWell);
+        Console.WriteLine("Test 7 Passed!");
     }
 
     [Fact]
     public async Task CheckIncidentFunktion()
     {
-        
-        sleep(1000);
+        IncidentController.InserTestIncidents();
+        Thread.Sleep(1000);
+        Incident[] incidentList = IncidentController.getIncidentListfromDB();
+        if (!(incidentList == null || incidentList.Length == 0)) //Kontrolliert ob leer
+            Assert.True(true);
+        else
+            Assert.True(false);
+        Assert.Equal(1, IncidentController.changeOwner(1, 1));
+        Console.WriteLine("Test 8 Passed!");
     }
 }

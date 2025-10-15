@@ -75,6 +75,15 @@ public class UserController : ControllerBase
         var argon2Hasher = getArgon2idHasher();
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
 
+        String str = "ABCDEF0123456789";
+        int size = 32;
+        String salt = "";
+        for (int i = 0; i < size; i++)
+        {
+            int x = rnd.Next(str.Length);
+            salt = salt + str[x];
+        }
+
         //Veryfy Password
         Boolean correctPw = verifyPW(passwordChange.id, passwordChange.PasswordOld);
         Boolean isThePWStrong = checkPWRequriements(passwordChange.PasswordNew);
@@ -86,7 +95,6 @@ public class UserController : ControllerBase
         if (correctPw)
         {
             //Update Password
-            var salt = Convert.ToString(rnd.Next(0, 999999999));
             var PWHash = argon2Hasher.DeriveBytes(passwordChange.PasswordNew, Convert.FromHexString(salt), 256);
             var sql = "UPDATE Users SET PasswordHash=@HASH, PasswordSalt=@SALT WHERE ID=@ID";
 
@@ -114,30 +122,34 @@ public class UserController : ControllerBase
     [HttpDelete(Name = "DisableUser")]
     public IActionResult DisableUser([FromBody] int id)
     {
-        try
-        {
-            Boolean disabled = DisableUserInDB(id);
-        }
-        catch
-        {
-            return BadRequest("Check API for more Info!");
-        }
-        return Accepted();
+        return Ok(DisableUserInDB(id));
     }
 
     public static Boolean DisableUserInDB(int id)
     {
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
-        var sql = "UPDATE Users SET IsDisabled=1 WHERE ID=@ID;";
 
-        conn.Open();
-        var Command = new SqlCommand(sql, conn);
-        Command.Parameters.Add("@ID", System.Data.SqlDbType.Int);
-        Command.Parameters["@ID"].Value = id;
-        Command.ExecuteNonQuery();
-        conn.Close();
 
-        return true;
+        try
+        {
+            var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+            var sql = "UPDATE Users SET IsDisabled=1 WHERE ID=@ID;";
+
+            conn.Open();
+            var Command = new SqlCommand(sql, conn);
+            Command.Parameters.Add("@ID", System.Data.SqlDbType.Int);
+            Command.Parameters["@ID"].Value = id;
+            int Result = Command.ExecuteNonQuery();
+            conn.Close();
+            if (Result==1)
+            {
+                return true;    
+            }
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     [HttpGet("GetUserInfo/{id}")]

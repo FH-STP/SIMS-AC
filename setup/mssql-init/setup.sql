@@ -26,6 +26,16 @@ CREATE TABLE Users (
 );
 
 -- =================================================================
+-- Table for Logs
+-- =================================================================
+CREATE TABLE LogsSIMS (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    TextMessage NVARCHAR(100) NOT NULL,
+    Creation_Time DATETIME2 NOT NULL DEFAULT GETDATE(),
+    LogLevel INT NOT NULL
+);
+
+-- =================================================================
 -- Table for Predefined Conclusions
 -- =================================================================
 CREATE TABLE Conclusion_Definitions (

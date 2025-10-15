@@ -5,7 +5,7 @@ using sims.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.SqlClient;
 using sims.Misc;
-using System.Data;
+using System.Data; 
 
 namespace sims.Controllers;
 
@@ -71,11 +71,17 @@ public class IncidentController : ControllerBase
     [HttpGet("GetIncidentList")]
     public IActionResult GetIncidentList()
     {
+        
+        return Ok(getIncidentListfromDB());
+    }
+    
+    public static Incident[] getIncidentListfromDB()
+    {
         var connReader = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         connReader.Open();
         var sqlReadSize = "SELECT COUNT(*) FROM Incidents WHERE IsDisabled=0;";
         var CommandCount = new SqlCommand(sqlReadSize, connReader);
-        Incident[] incidentList = new Incident[(Int32) CommandCount.ExecuteScalar()];
+        Incident[] incidentList = new Incident[(Int32)CommandCount.ExecuteScalar()];
         connReader.Close();
 
 
@@ -124,10 +130,10 @@ public class IncidentController : ControllerBase
                 iterator++;
             }
         }
-        
+
         conn.Close();
 
-        return Ok(incidentList);
+        return incidentList;
     }
 
     [HttpPost(Name = "CreateIncident")]
@@ -275,6 +281,12 @@ public class IncidentController : ControllerBase
     [HttpPut("Assign")]
     public IActionResult Assign(int id, int owner)
     {
+
+        return Ok(changeOwner(id, owner));
+    }
+
+    public static int changeOwner(int id, int owner)
+    {
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "UPDATE Incidents SET OwnerID=@OwnerID WHERE ID=@ID";
         //TODO fix sql injection
@@ -288,7 +300,7 @@ public class IncidentController : ControllerBase
 
         conn.Close();
 
-        return Ok(retValue);
+        return retValue;
     }
     
     [HttpPost("Link")]
@@ -347,9 +359,10 @@ public class IncidentController : ControllerBase
 
     public static void InserTestIncidents()
     {
+        Logging.loglog(0, "Created ~60 Test Incidents to fill DB!");
         for (int iterator = 0; iterator < 30; iterator++)
         {
-            CreateIncidentDB(new Incident(0, 1, 1, "Danger Shai Hulud", "{\"text" + "\": \"Shai Hulud has infected Host X\"}", "", 5, 1, 0, DateTime.Now, false));
+            CreateIncidentDB(new Incident(0, 1, 1, "Danger, Shai Hulud", "{\"text" + "\": \"Shai Hulud has infected Host X\"}", "", 5, 1, 0, DateTime.Now, false));
             CreateIncidentDB(new Incident(0, 1, 1, "Scan", "{\"text" + "\": \"Host X was Scanned\"}", "", 3, 1, 0, DateTime.Now, false));
         }
         return;

@@ -29,7 +29,7 @@ public class ConclusionController : ControllerBase
 
     public static string ConclusionInfo(int id)
     {
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         var sqlRead = "SELECT Conclusion_ID, Text, IsTruePositive, IsInformational FROM Conclusion_Definitions";
 
         conn.Open();
@@ -56,7 +56,7 @@ public class ConclusionController : ControllerBase
     public async Task<IActionResult> InsertConclusions([FromBody] Conclusion conclusion)
     {
         new Conclusion(0, "True Positiv - Malware", true, false);
-        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
+        var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder());
         String IsTruePositive = "0";
         if (conclusion.IsTruePositive)
         {

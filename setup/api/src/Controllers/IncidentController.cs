@@ -99,7 +99,7 @@ public class IncidentController : ControllerBase
 
         if (reader.HasRows)
         {
-            while (reader.Read() && (iterator < 25))
+            while (reader.Read())
             {
                 try
                 {

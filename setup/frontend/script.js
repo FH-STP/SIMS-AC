@@ -28,7 +28,7 @@ const API_BASE_URL = 'http://localhost:5321';
 
 // Authentication Functions
 async function login(username, password) {
-    console.log(`🔐 Attempting login with username: ${username}`);
+
     try {
         // Real API call to /Account/Login endpoint
         const response = await fetch(`${API_BASE_URL}/Account/Login`, {
@@ -44,17 +44,17 @@ async function login(username, password) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Login successful:', data);
+
             
             // Store JWT token if provided (API returns accessToken in lowercase)
             const token = data.accessToken || data.AccessToken;
             if (token) {
                 localStorage.setItem('jwt_token', token);
-                console.log('🔑 JWT token stored successfully');
+
             }
             
             // Create user object from response
-            console.log('Login API response:', data);
+
             
             const user = {
                 id: data.ID || data.Id || data.id || data.UserId || data.userId || 1,
@@ -66,7 +66,7 @@ async function login(username, password) {
                 profileImage: null
             };
             
-            console.log('Created user object:', user);
+
             
             appState.isLoggedIn = true;
             appState.currentUser = user;
@@ -77,7 +77,7 @@ async function login(username, password) {
                 currentUser: user,
                 currentTab: 'grafana'
             }));
-            console.log('💾 Session data saved');
+
             
             showDashboard();
             return { success: true };
@@ -105,7 +105,7 @@ async function logout() {
         sessionStorage.removeItem('simsAcSession');
         
         // No specific logout API endpoint in backend, just clear local state
-        console.log('🔓 Logging out and clearing all session data...');
+
         
         appState.isLoggedIn = false;
         appState.currentUser = null;
@@ -166,7 +166,7 @@ async function apiCall(endpoint, options = {}) {
             ...options
         };
 
-        console.log(`🌐 Real API Call: ${config.method || 'GET'} ${url}`);
+
         
         const response = await fetch(url, config);
         
@@ -187,7 +187,7 @@ async function apiCall(endpoint, options = {}) {
         }
         
         const data = await response.json();
-        console.log('✅ API Response:', data);
+
         return data;
         
     } catch (error) {
@@ -196,7 +196,7 @@ async function apiCall(endpoint, options = {}) {
         // Only use fallback for development during API development
         // Remove this for production!
         if (endpoint === '/auth/login' || endpoint === '/auth/register') {
-            console.log('🔄 Authentication endpoints - using mock fallback for development...');
+
             return simulateApiCall(endpoint, options);
         }
         
@@ -209,7 +209,7 @@ async function apiCall(endpoint, options = {}) {
 async function simulateApiCall(endpoint, options = {}) {
     return new Promise((resolve) => {
         setTimeout(() => {
-            console.log(`Mock API Call: ${options.method || 'GET'} ${endpoint}`);
+
             
             // Simulate different responses based on endpoint
             if (endpoint === '/auth/login') {
@@ -283,7 +283,7 @@ async function simulateApiCall(endpoint, options = {}) {
 
 // Admin Authentication for User Registration
 async function authenticateAdminForRegistration(username, password) {
-    console.log(`🔐 Attempting admin authentication for user creation with username: ${username}`);
+
     try {
         // Real API call to /Account/Login endpoint
         const response = await fetch(`${API_BASE_URL}/Account/Login`, {
@@ -299,7 +299,7 @@ async function authenticateAdminForRegistration(username, password) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('✅ Admin authentication successful:', data);
+
             
             // Check if user is actually an admin (you may need to verify this based on your API response)
             // Store the admin token temporarily for user creation
@@ -307,12 +307,12 @@ async function authenticateAdminForRegistration(username, password) {
             const token = data.accessToken || data.AccessToken;
             
             if (token) {
-                console.log('Setting admin token in appState...');
+
                 appState.adminTokenForRegistration = token;
                 appState.adminAuthenticatedForRegistration = true;
-                console.log('🔑 Admin token stored for user creation');
-                console.log('Verification - Token in appState:', appState.adminTokenForRegistration);
-                console.log('Verification - Auth flag in appState:', appState.adminAuthenticatedForRegistration);
+
+
+
             } else {
                 console.error('⚠️ Access token is missing in response!');
             }
@@ -360,12 +360,12 @@ async function register(userData) {
         });
 
         if (response.ok) {
-            console.log('✅ User creation successful');
+
             
             // If profile image is provided, upload it
             if (userData.profileImage) {
                 try {
-                    console.log('📸 Uploading profile image for new user...');
+
                     
                     // Login with the new user credentials to get proper session
                     const loginResult = await login(userData.username, userData.password);
@@ -380,7 +380,7 @@ async function register(userData) {
                         const uploadResult = await uploadProfileImage(file);
                         
                         if (uploadResult.success) {
-                            console.log('✅ Profile image uploaded successfully');
+
                         } else {
                             console.warn('❌ Profile image upload failed:', uploadResult.error);
                         }
@@ -467,9 +467,9 @@ function showRegisterForm() {
 }
 
 function showUserCreationStep() {
-    console.log('🔄 Switching to user creation step...');
-    console.log('adminAuthStep element:', elements.adminAuthStep);
-    console.log('userCreationStep element:', elements.userCreationStep);
+
+
+
     
     // Show step 2 after admin authentication
     elements.adminAuthStep.style.display = 'none';
@@ -479,7 +479,7 @@ function showUserCreationStep() {
     elements.registerForm.reset();
     clearImagePreview('reg');
     
-    console.log('✅ User creation step should now be visible');
+
 }
 
 function showDashboard() {
@@ -554,7 +554,7 @@ async function loadUserProfile() {
     if (!appState.currentUser) return;
     
     try {
-        console.log('🔄 Loading user profile from API...');
+
         
         // Load user data from API
         const response = await fetch(`${API_BASE_URL}/User/GetUserInfo/${appState.currentUser.id}`, {
@@ -566,11 +566,11 @@ async function loadUserProfile() {
         
         if (response.ok) {
             const userData = await response.json();
-            console.log('User data from API:', userData);
-            console.log('Available properties:', Object.keys(userData));
+
+
             
             // Set form values using API data
-            console.log('Setting form values - UserName:', userData.UserName, 'EMail:', userData.EMail, 'Telephone:', userData.Telephone);
+
             
             elements.profileUsername.value = userData.UserName || userData.userName || '';
             elements.profileEmail.value = userData.EMail || userData.eMail || userData.email || '';
@@ -603,8 +603,8 @@ async function loadUserProfile() {
 
 async function changePassword(currentPassword, newPassword) {
     try {
-        console.log('🔄 Changing password for user ID:', appState.currentUser.id);
-        console.log('Current user object:', appState.currentUser);
+
+
         
         // Ensure we have a valid user ID
         if (!appState.currentUser || !appState.currentUser.id) {
@@ -618,7 +618,7 @@ async function changePassword(currentPassword, newPassword) {
             PasswordNew: newPassword
         };
         
-        console.log('Sending password change data:', passwordChangeData);
+
         
         const response = await fetch(`${API_BASE_URL}/User`, {
             method: 'PUT',
@@ -630,7 +630,7 @@ async function changePassword(currentPassword, newPassword) {
         });
 
         if (response.ok) {
-            console.log('✅ Password changed successfully');
+
             return { success: true };
         } else {
             const errorText = await response.text();
@@ -699,7 +699,7 @@ function clearImagePreview(type) {
 // Profile Image API Functions
 async function uploadProfileImage(file) {
     try {
-        console.log('🔄 Uploading profile image...');
+
         
         const formData = new FormData();
         formData.append('file', file);
@@ -714,7 +714,7 @@ async function uploadProfileImage(file) {
         
         if (response.ok) {
             const result = await response.json();
-            console.log('✅ Profile image uploaded successfully:', result);
+
             
             // Reload profile image after upload
             await loadProfileImage();
@@ -733,7 +733,7 @@ async function uploadProfileImage(file) {
 
 async function loadProfileImage() {
     try {
-        console.log('🔄 Loading profile image...');
+
         
         const response = await fetch(`${API_BASE_URL}/User/GetUserPic`, {
             method: 'GET',
@@ -754,11 +754,11 @@ async function loadProfileImage() {
             // Update all avatar displays
             updateAllAvatars(imageUrl);
             
-            console.log('✅ Profile image loaded successfully');
+
             return { success: true, imageUrl };
         } else if (response.status === 404) {
             // No profile image found - use default
-            console.log('ℹ️ No profile image found, using default');
+
             updateAllAvatars(null);
             return { success: true, imageUrl: null };
         } else {
@@ -865,7 +865,7 @@ function resetSettings() {
 }
 
 function loadGrafana() {
-    console.log('Grafana tab selected');
+
 }
 
 function toggleUserDropdown() {
@@ -885,7 +885,7 @@ function hideSettingsModal() {
 // Incident Management Functions
 async function loadIncidents() {
     try {
-        console.log('🔄 Loading incidents...');
+
         
         // Show loading state
         const tbody = elements.incidentsTableBody;
@@ -907,26 +907,26 @@ async function loadIncidents() {
 
         if (response.ok) {
             const incidents = await response.json();
-            console.log('✅ Incidents loaded:', incidents);
-            console.log('� Total incidents received:', incidents ? incidents.length : 0);
+
+
             
             // Debug: Count null values
             if (incidents) {
                 const nullCount = incidents.filter(i => i === null || i === undefined).length;
                 const validCount = incidents.filter(i => i !== null && i !== undefined).length;
-                console.log('📋 Valid incidents:', validCount, 'Null incidents:', nullCount);
+
                 
                 // Show first valid incident
                 const firstValid = incidents.find(i => i !== null && i !== undefined);
                 if (firstValid) {
-                    console.log('📋 First valid incident sample:', firstValid);
-                    console.log('🔍 Incident properties:', Object.keys(firstValid));
+
+
                 }
             }
             
             // Store incidents in state (filter out null values) and apply current filters/sorting
             appState.allIncidents = (incidents || []).filter(incident => incident !== null && incident !== undefined);
-            console.log('💾 Stored valid incidents:', appState.allIncidents.length);
+
             filterAndSortIncidents();
         } else {
             console.error('Failed to load incidents:', response.status);
@@ -1227,46 +1227,10 @@ function addIncidentActionListeners() {
     });
 }
 
-async function assignIncidentToCurrentUser(incidentId) {
-    try {
-        console.log(`🔄 Assigning incident ${incidentId} to current user...`);
-        
-        if (!appState.currentUser) {
-            console.error('No current user found');
-            return;
-        }
-
-        const response = await fetch(`${API_BASE_URL}/Incident/Assign`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
-            },
-            body: JSON.stringify({
-                Id: incidentId,
-                Owner: appState.currentUser.id
-            })
-        });
-
-        if (response.ok) {
-            console.log('✅ Incident assigned successfully');
-            showSuccessMessage('Incident wurde Ihnen zugewiesen!');
-            // Reload incidents to reflect changes
-            loadIncidents();
-        } else {
-            console.error('Failed to assign incident:', response.status);
-            showErrorMessage('Fehler beim Zuweisen des Incidents');
-        }
-    } catch (error) {
-        console.error('Error assigning incident:', error);
-        showErrorMessage('Verbindungsfehler beim Zuweisen');
-    }
-}
-
 // Function to create test incidents via API
 async function createTestIncidents() {
     try {
-        console.log('🔄 Creating test incidents...');
+
         
         const response = await fetch(`${API_BASE_URL}/Incident/InserTestInfoIncidents`, {
             method: 'POST',
@@ -1276,7 +1240,7 @@ async function createTestIncidents() {
         });
         
         if (response.ok) {
-            console.log('✅ Test incidents created successfully');
+
             showSuccessMessage('Test-Incidents wurden erfolgreich erstellt!');
             // Reload incidents to show new test incidents
             if (appState.currentTab === 'incidents') {
@@ -1294,8 +1258,8 @@ async function createTestIncidents() {
 
 async function createIncident(incidentData) {
     try {
-        console.log('🔄 Creating new incident...', incidentData);
-        console.log('Current user:', appState.currentUser);
+
+
         
         if (!appState.currentUser) {
             console.error('No current user found');
@@ -1327,7 +1291,7 @@ async function createIncident(incidentData) {
         });
 
         if (response.ok) {
-            console.log('✅ Incident created successfully');
+
             return { success: true };
         } else {
             console.error('Failed to create incident:', response.status);
@@ -1366,7 +1330,7 @@ function hideCreateIncidentModal() {
 // Incident Details Modal Functions
 async function showIncidentDetails(incidentId) {
     try {
-        console.log('🔄 Loading incident details for ID:', incidentId);
+
         
         // Find incident in our cached data
         const incident = appState.allIncidents.find(inc => 
@@ -1533,7 +1497,7 @@ async function saveIncidentChanges() {
     const incidentId = parseInt(elements.incidentDetailsModal.dataset.incidentId);
     
     try {
-        console.log('🔄 Saving incident changes for ID:', incidentId);
+
         
         // Collect all changes
         const changes = {
@@ -1554,8 +1518,8 @@ async function saveIncidentChanges() {
             }
         });
         
-        console.log('Changes to save:', changes);
-        console.log('Editable security fields:', editableFields);
+
+
         
         // For now, just show success since there's no update API yet
         // TODO: Implement incident update API call here
@@ -1603,11 +1567,30 @@ async function assignIncidentToCurrentUser() {
     const incidentId = parseInt(elements.incidentDetailsModal.dataset.incidentId);
     
     try {
-        console.log('🔄 Assigning incident to current user:', incidentId);
+
         
-        const result = await assignIncident(incidentId);
-        
-        if (result.success) {
+        if (!appState.currentUser) {
+            console.error('No current user found');
+            elements.incidentDetailError.textContent = 'Benutzer nicht gefunden';
+            elements.incidentDetailError.style.display = 'block';
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/Incident/Assign`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: JSON.stringify({
+                Id: incidentId,
+                Owner: appState.currentUser.id
+            })
+        });
+
+        if (response.ok) {
+
+            
             // Update the owner field with username
             elements.detailOwner.value = appState.currentUser.username;
             elements.assignIncidentToMe.style.display = 'none';
@@ -1632,14 +1615,17 @@ async function assignIncidentToCurrentUser() {
             }, 3000);
             
         } else {
-            elements.incidentDetailError.textContent = result.error;
+            console.error('Failed to assign incident:', response.status);
+            const errorText = await response.text();
+            console.error('Assignment error details:', errorText);
+            elements.incidentDetailError.textContent = 'Fehler beim Zuweisen des Incidents';
             elements.incidentDetailError.style.display = 'block';
             elements.incidentDetailSuccess.style.display = 'none';
         }
         
     } catch (error) {
         console.error('Error assigning incident:', error);
-        elements.incidentDetailError.textContent = 'Fehler beim Zuweisen des Incidents';
+        elements.incidentDetailError.textContent = 'Verbindungsfehler beim Zuweisen';
         elements.incidentDetailError.style.display = 'block';
         elements.incidentDetailSuccess.style.display = 'none';
     }
@@ -1824,12 +1810,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const result = await authenticateAdminForRegistration(username, password);
         
-        console.log('Admin auth result:', result);
-        console.log('Admin token stored:', appState.adminTokenForRegistration);
-        console.log('Admin authenticated flag:', appState.adminAuthenticatedForRegistration);
+
+
+
         
         if (result.success) {
-            console.log('Moving to user creation step...');
+
             elements.adminAuthError.style.display = 'none';
             // Move to step 2 (user creation)
             showUserCreationStep();
@@ -2007,11 +1993,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Change password
-            console.log('Attempting to change password...');
+
             const passwordResult = await changePassword(currentPassword, newPassword);
             
             if (passwordResult.success) {
-                console.log('✅ Password changed successfully');
+
                 hasChanges = true;
                 
                 // Clear password fields
@@ -2029,11 +2015,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle profile image change
         const imageFile = elements.profileImageInput.files[0];
         if (imageFile) {
-            console.log('Uploading new profile image...');
+
             const imageResult = await uploadProfileImage(imageFile);
             
             if (imageResult.success) {
-                console.log('✅ Profile image updated successfully');
+
                 hasChanges = true;
             } else {
                 console.error('❌ Profile image upload failed:', imageResult.error);
@@ -2316,7 +2302,7 @@ window.addEventListener('load', function() {
     // Check for JWT token first (persistent login)
     const token = localStorage.getItem('jwt_token');
     if (token) {
-        console.log('🔑 JWT token found, attempting to restore session...');
+
         
         // Try to restore session data from sessionStorage
         const savedSession = sessionStorage.getItem('simsAcSession');
@@ -2324,7 +2310,7 @@ window.addEventListener('load', function() {
             try {
                 const session = JSON.parse(savedSession);
                 if (session.isLoggedIn && session.currentUser) {
-                    console.log('✅ Session restored from storage');
+
                     appState.isLoggedIn = true;
                     appState.currentUser = session.currentUser;
                     appState.currentTab = session.currentTab || 'grafana';
@@ -2344,7 +2330,7 @@ window.addEventListener('load', function() {
             const tokenParts = token.split('.');
             if (tokenParts.length === 3) {
                 const payload = JSON.parse(atob(tokenParts[1]));
-                console.log('🔍 Decoded JWT payload:', payload);
+
                 
                 // Create user from JWT claims
                 const user = {
@@ -2366,7 +2352,7 @@ window.addEventListener('load', function() {
                     return;
                 }
                 
-                console.log('✅ Session restored from JWT token');
+
                 appState.isLoggedIn = true;
                 appState.currentUser = user;
                 showDashboard();
@@ -2379,7 +2365,7 @@ window.addEventListener('load', function() {
     }
     
     // No valid token or session - show login screen
-    console.log('No valid session found, showing login screen');
+
     showAuthScreen();
 });
 

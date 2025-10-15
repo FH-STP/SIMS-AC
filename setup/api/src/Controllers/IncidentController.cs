@@ -132,7 +132,7 @@ public class IncidentController : ControllerBase
         }
 
         conn.Close();
-
+        
         return incidentList;
     }
 
@@ -183,6 +183,7 @@ public class IncidentController : ControllerBase
 
         Command.ExecuteNonQuery();
         conn.Close();
+        Logging.loglog(0, "Creating Incident: "+incident.Title); 
     }
 
     [HttpDelete(Name = "DisableIncident")]
@@ -198,7 +199,7 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-                
+        Logging.loglog(0, "Disabeling Incident: "+id); 
         return Ok(retValue);
     }
 
@@ -217,7 +218,7 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-                
+        Logging.loglog(0, "Escalateing Incident: "+id+" to Severity: "+severity); 
         return Ok(retValue);
     }
 
@@ -236,7 +237,7 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-                
+        Logging.loglog(0, "Changing Incident: "+id+" to Status: "+Status); 
         return Ok(retValue);
     }
 
@@ -255,7 +256,7 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-                
+        Logging.loglog(0, "Changing Incident: "+id+" to Conclusion: "+ConclusionID); 
         return Ok(retValue);
     }
 
@@ -274,7 +275,7 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-                
+        Logging.loglog(0, "Changing Incident: "+id+" to Notes: "+notes);
         return Ok(retValue);
     }
 
@@ -299,13 +300,14 @@ public class IncidentController : ControllerBase
         int retValue = Command.ExecuteNonQuery();
 
         conn.Close();
-
+        Logging.loglog(0, "Changing Incident: "+id+" to Owner: "+owner);
         return retValue;
     }
     
     [HttpPost("Link")]
     public IActionResult Link(int parrentID, int childID)
     {
+
         var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
         var sql = "INSERT INTO Incident_Links (Main_IncidentID, Sub_IncidentID) VALUES (@parrentID, @childID);";
 
@@ -317,7 +319,9 @@ public class IncidentController : ControllerBase
         Command.Parameters["@childID"].Value = childID;
         Command.ExecuteNonQuery();
         conn.Close();
-                
+
+        Logging.loglog(0, "Linking Incidents "+parrentID+" + "+childID);
+
         return Ok();
     }
 

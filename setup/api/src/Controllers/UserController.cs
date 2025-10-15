@@ -64,6 +64,8 @@ public class UserController : ControllerBase
         Command.ExecuteNonQuery();
         conn.Close();
 
+        Logging.loglog(5, "User: " + user.UserName + " was created");
+
         return Ok();
     }
 
@@ -89,6 +91,7 @@ public class UserController : ControllerBase
         Boolean isThePWStrong = checkPWRequriements(passwordChange.PasswordNew);
         if (!isThePWStrong)
         {
+            Logging.loglog(5, "User: " + passwordChange.id + " attempted to change Pw to a too Weak one");
             return BadRequest("Password to weak!");
         }
 
@@ -110,6 +113,7 @@ public class UserController : ControllerBase
             Command.ExecuteNonQuery();
             conn.Close();
 
+            Logging.loglog(5, "User: " + passwordChange.id + " changed his Password");
             return Ok();
         }
         else
@@ -128,7 +132,7 @@ public class UserController : ControllerBase
     public static Boolean DisableUserInDB(int id)
     {
 
-
+        Logging.loglog(0, "User: " + id + " was attempted to be disabled");
         try
         {
             var conn = new SqlConnection(KonstantenSIMS.DbConnectionStringBuilder);
@@ -142,6 +146,7 @@ public class UserController : ControllerBase
             conn.Close();
             if (Result==1)
             {
+                Logging.loglog(5, "User: " + id + " was Disabled");
                 return true;    
             }
             return false;
@@ -217,6 +222,7 @@ public class UserController : ControllerBase
             var fileCollection = database.GetCollection<BsonDocument>("profilePic");
             await fileCollection.InsertOneAsync(fileInfo.ToBsonDocument());
 
+            Logging.loglog(0, "User: " + UserIDs + " Uploaded Image");
             return Ok(fileId);
         }
     }

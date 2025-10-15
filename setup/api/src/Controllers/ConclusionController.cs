@@ -80,6 +80,7 @@ public class ConclusionController : ControllerBase
         Command.ExecuteNonQuery();
         conn.Close();
 
+        Logging.loglog(0, "Creating conclusion: "+conclusion.Text); 
         return CreatedAtAction(nameof(InsertConclusions), new { id = conclusion.ConclusionID }, conclusion);
     }
     

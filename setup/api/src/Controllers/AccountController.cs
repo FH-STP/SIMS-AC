@@ -69,20 +69,24 @@ public class AccountController : ControllerBase
         // Verity PW
         if (loginRequest.Password == null)
         {
+            Logging.loglog(5, "User: " + UserID + " tried logging in without PW");
             return BadRequest("Password is null.");
         }
         Boolean correctPw = UserController.verifyPW(UserID, loginRequest.Password);
         if (!correctPw)
         {
+            Logging.loglog(5, "User: " + UserID + " Failed login");
             return Unauthorized();
         }
 
         var Tesult = await JwtService.Authenticate(loginRequest, Role);
-        if(Tesult is null)
+        if (Tesult is null)
         {
+            Logging.loglog(5, "User: " + UserID + " Had an Impossible Error at Login!");
             return BadRequest("Impossible Error.");
         }
 
+        Logging.loglog(5, "User: " + UserID + " Logged In");
         return Ok(Tesult);
     }
 }

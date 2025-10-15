@@ -1,0 +1,711 @@
+{
+  "name": "NOTaBOT",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=application: {{ $json.application }}\n{{ $json.prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are NOTaBOT, the IT Administrator for Niklas Klutz. Your responsibilities are: monitoring and maintaining all Docker containers, troubleshooting network and connectivity issues, checking and diagnosing local web services within the subnet 192.168.0.0/24, and monitoring the MikroTik WLAN Router (192.168.0.1). You are not a general-purpose assistant; your work is strictly technical (Docker, network diagnostics, internal services).\n\nCRITICAL PERMISSION RULES:\n- You MUST request explicit approval before running any command that could modify the system.\n- You MUST NEVER apply any fix or run any modifying command without **explicit approval**.\n- Modification commands include, but are not limited to: docker start, docker stop, docker run, docker rm, kill, pkill, systemctl, touch, mv, rm, or any command that creates, changes, or deletes files or services.\n- Diagnostic commands (docker ps, docker logs, netstat, ps, ping) are allowed without approval.\n- When uncertain, always ask first.\n- Tasks outside Docker or web diagnostics must be handled via the Website Tool.\n\nNETWORK ACCESS & WEBSITE TOOL RULES:\n- You may perform HTTP GET requests to any IP in 192.168.0.0/24, including the MikroTik router at 192.168.0.1.\n- You may check services such as Proxmox, Portainer, Grafana, or the MikroTik Web UI.\n- A service is operational only if it returns valid HTML or a recognizable interface page.\n- The top-level \"application\" field MUST always be copied exactly from the incoming JSON field {{ $json.application }}.\n- NEVER replace \"application\" with any container, service name, or text extracted from the prompt.\n- The \"message\" field is the only place to describe individual services or failures.\n- For any prompt type (docker, mediastack, etc.), do not infer or rename \"application\". Always copy it from the input JSON.\n- Do not perform POST, PUT, DELETE, or other modifying HTTP methods.\n- Do not attempt authentication, configuration, or changes on any service or router.\n- Do not access targets outside 192.168.0.0/24.\n\nMIKROTIK EXPERTISE:\n- You understand MikroTik RouterOS and can identify its login page or known response patterns.\n- You may check if the router is reachable and responsive.\n- You may not attempt configuration, authentication, or changes.\n\nTROUBLESHOOTING WORKFLOW:\n1. Check service accessibility via the Website Tool or Docker commands. Operational only if valid HTML is returned or the container is running.\n2. If a service or container is unavailable: \n   - Verify the container exists and its state.\n   - Inspect logs or errors to determine why it stopped.\n   - Check if any other process is using the expected port.\n   - Identify the root cause before proposing a fix.\n3. Once the issue is identified: \n   - Provide a short explanation in \"message\" describing what happened.\n   - Set \"request_is_true\" to false if any service/container is down.\n   - Set \"applied_fix\" to false.\n   - Set \"needs_approval\" to true.\n   - Include the exact command(s) needed to restore the service in \"commands_requested\".\n   - **Do not apply any fix until explicit approval is received.**\n4. Only after receiving explicit approval:\n   - Execute the fix.\n   - Update \"applied_fix\" = true\n   - Update \"needs_approval\" = false\n   - Set \"commands_requested\" = null\n   - Update \"message\" with a short confirmation that the issue is resolved.\n\nRESPONSE FORMAT (JSON ONLY, n8n-compatible):\nDiagnostic / Informational Mode:\n{\n    \"request_is_true\": true/false,\n    \"application\": \"{{ $json.application }}\",\n    \"message\": \"Detailed explanation of status and any actions taken\",\n    \"applied_fix\": false,\n    \"needs_approval\": false,\n    \"commands_requested\": \"No commands requested\"\n}\nCommand Request Mode (requires approval):\n{\n    \"request_is_true\": false,\n    \"application\": \"{{ $json.application }}\",\n    \"message\": \"Short explanation of the issue\",\n    \"applied_fix\": false,\n    \"needs_approval\": true,\n    \"commands_requested\": \"Exact command(s) to run upon approval\"\n}\nPost-Fix Confirmation Mode:\n{\n    \"request_is_true\": true,\n    \"application\": \"{{ $json.application }}\",\n    \"message\": \"Short confirmation that the issue is resolved\",\n    \"applied_fix\": true,\n    \"needs_approval\": false,\n    \"commands_requested\": \"No commands requested, Problem resolved\"\n}\n\nOUTPUT BEHAVIOR RULES:\n- Always respond with **JSON only**, no extra text outside the block.\n- All outputs must be concise, precise, and objective.\n- \"request_is_true\" reflects the actual operational status: true only if all requested services/containers are running.\n- \"application\" is immutable and always matches the incoming JSON.\n- \"commands_requested\" is null unless explicit approval is required to fix a problem.\n- **Never execute fixes automatically; always wait for explicit approval first.**\n- Always include a brief message explaining what happened or what was done.\n- Always conclude with:\nKind regards,\nNOTaBOT\n\nABSOLUTE RESTRICTIONS:\n- Never execute or simulate modifying commands without approval.\n- Never reconfigure, delete, or alter containers or router settings.\n- Never send requests outside the local subnet or use non-GET methods.\n- Never generate natural-language output outside JSON when actions or fixes are discussed.\n- Always remain brief, compliant, and within your defined duties."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        656,
+        -16
+      ],
+      "id": "463f1f2e-5ee3-41db-a645-b6c6126fd670",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        224
+      ],
+      "id": "bc6fb3d2-99c9-4227-bbf6-65aa55123f2d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "AD5XtrbeQbby07gi",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool for HTTP Requests.",
+        "url": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('URL', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        224
+      ],
+      "id": "9a3a13f9-dafa-4b84-8a1c-ab4310cd399f",
+      "name": "Website Tool"
+    },
+    {
+      "parameters": {
+        "description": "Call this to check the execute commands on the WLAN Router (Mikrotik)\nCommand Cheat Sheet:\nhttps://tech.layer-x.com/essential-mikrotik-commands-every-network-engineer-should-know/",
+        "workflowId": {
+          "__rl": true,
+          "value": "0RhkIFdD63zhqgZk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/0RhkIFdD63zhqgZk",
+          "cachedResultName": "SSH_n8n_Mikrotik"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "command": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('command', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "command",
+              "displayName": "command",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        224
+      ],
+      "id": "45ed3f92-0daa-42f6-b62d-788b06bad3e0",
+      "name": "Mikrotik"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "UAWuB3ZSJnTUYVzf",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/UAWuB3ZSJnTUYVzf",
+          "cachedResultName": "SSH_n8n_Server"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "command": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('command', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "command"
+          ],
+          "schema": [
+            {
+              "id": "command",
+              "displayName": "command",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        224
+      ],
+      "id": "5f5d3314-30ba-4281-914a-c81b02261749",
+      "name": "Docker"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"request_is_true\": true,\n  \"application\": \"{{ $json.application }}\",\n  \"message\": \"All containers are running and responsive\",\n  \"applied_fix\": false,\n  \"needs_approval\": false,\n  \"commands_requested\": \"Exact command(s) to run upon approval (null if none)\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        224
+      ],
+      "id": "b1d4262b-2d2b-4160-9099-1f2741d335d0",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9d4e2541-7d49-467f-95ce-bd0d84cc121f",
+                    "leftValue": "={{ $json.output.application }}",
+                    "rightValue": "docker",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Docker"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.application }}",
+                    "rightValue": "mediastack",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "906b7384-36ee-4cf4-ba11-e7a388251713"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Mediastack"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1248,
+        -16
+      ],
+      "id": "06016b03-f9da-438a-bf43-f6857b51fad0",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b5c8b0c9-6fcf-498c-abbc-498bc38c28d0",
+              "leftValue": "={{ $json.output.request_is_true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -112
+      ],
+      "id": "dd200c86-7c99-4a7f-94e9-67f1f9afa80f",
+      "name": "IF_DOCKER"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        -112
+      ],
+      "id": "ded8f79a-e8de-4f94-8755-3e0cc7eeabd2",
+      "name": "Trigger_Docker"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b1d0555-9437-4051-ae0e-f80a8e9cfba3",
+              "name": "chatID",
+              "value": "NOTaBOT0101",
+              "type": "string"
+            },
+            {
+              "id": "80e0285d-bfcd-4631-8d9e-cfd981be1e3f",
+              "name": "prompt",
+              "value": "Are all \"Docker\" containers running? Use docker ps -a. Use the lowest resources and amount of requests possible - preferrably only the \"Docker\" tool",
+              "type": "string"
+            },
+            {
+              "id": "c2572b8c-0fae-49cf-8f95-ba4267cc5488",
+              "name": "application",
+              "value": "docker",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        -112
+      ],
+      "id": "2db7b0db-76d9-4f12-87fa-51c00fcb7b0e",
+      "name": "Prompt_Docker"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        96
+      ],
+      "id": "514500b8-66ac-4882-9b52-c86f738e3a88",
+      "name": "Trigger_Arr"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.chatID }}",
+        "contextWindowLength": 0
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        528,
+        224
+      ],
+      "id": "1142da1e-817a-41e3-8f2d-59ead71ffb12",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b1d0555-9437-4051-ae0e-f80a8e9cfba3",
+              "name": "chatID",
+              "value": "NOTaBOT0101",
+              "type": "string"
+            },
+            {
+              "id": "80e0285d-bfcd-4631-8d9e-cfd981be1e3f",
+              "name": "prompt",
+              "value": "Check the accessibility of the following services on IP 192.168.0.12. Report only their status and ports in the message. Do NOT change the application name. Services to check: Jellyfin (8096), Jellyseerr (5055), Prowlarr (9696), Radarr (7878), Sonarr (8989). If at least one of the services is down then \"request_is_true\" must be false.",
+              "type": "string"
+            },
+            {
+              "id": "c2572b8c-0fae-49cf-8f95-ba4267cc5488",
+              "name": "application",
+              "value": "mediastack",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        96
+      ],
+      "id": "814ac5f3-6061-4bb1-b9ae-84270be734bc",
+      "name": "Prompt_Mediastack"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b5c8b0c9-6fcf-498c-abbc-498bc38c28d0",
+              "leftValue": "={{ $json.output.request_is_true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        96
+      ],
+      "id": "e1e7517c-c10d-4733-909d-995d4f9482b5",
+      "name": "IF_Mediastack"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1420180100283891752",
+          "mode": "list",
+          "cachedResultName": "Homelab",
+          "cachedResultUrl": "https://discord.com/channels/1420180100283891752"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1425217415616270420",
+          "mode": "list",
+          "cachedResultName": "arr-stack",
+          "cachedResultUrl": "https://discord.com/channels/1420180100283891752/1425217415616270420"
+        },
+        "content": "={{ $json.output.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        96
+      ],
+      "id": "926193a6-1dac-4d54-b80c-25f181ce4d43",
+      "name": "MSG_Mediastack",
+      "webhookId": "cec75ab0-19f0-4be4-af10-a91536b7cdc6",
+      "credentials": {
+        "discordBotApi": {
+          "id": "yRkfttzJe4CbSE34",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1420180100283891752",
+          "mode": "list",
+          "cachedResultName": "Homelab",
+          "cachedResultUrl": "https://discord.com/channels/1420180100283891752"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1425217442552217782",
+          "mode": "list",
+          "cachedResultName": "docker",
+          "cachedResultUrl": "https://discord.com/channels/1420180100283891752/1425217442552217782"
+        },
+        "content": "=Message:\n{{ $json.output.message }}\nApplied Fix: \n{{ $json.output.applied_fix }}\nCommands:    \n{{ $json.output.commands_requested }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        -96
+      ],
+      "id": "e8e656cd-cae7-4ed4-97d4-b9d7c7cf2e0e",
+      "name": "MSG_Docker",
+      "webhookId": "cec75ab0-19f0-4be4-af10-a91536b7cdc6",
+      "credentials": {
+        "discordBotApi": {
+          "id": "yRkfttzJe4CbSE34",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ae4b0984-b687-4c1b-8dd8-7ad42e599a35",
+              "leftValue": "={{ $json.output.needs_approval }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -272
+      ],
+      "id": "5c660ba0-a0d3-4369-8b8b-99e6f9a5f481",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Website Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mikrotik": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docker": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "IF_DOCKER",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_Mediastack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_DOCKER": {
+      "main": [
+        [],
+        [
+          {
+            "node": "MSG_Docker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger_Docker": {
+      "main": [
+        [
+          {
+            "node": "Prompt_Docker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt_Docker": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger_Arr": {
+      "main": [
+        [
+          {
+            "node": "Prompt_Mediastack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt_Mediastack": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_Mediastack": {
+      "main": [
+        [],
+        [
+          {
+            "node": "MSG_Mediastack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MSG_Docker": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Vienna",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "8f3b78af-cb65-4fee-bdb4-f3b756b6de65",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2f7a6e7a6d59e996460dbc8725b67c08f61865ff5dd412a0ffc883b9c0a3b2eb"
+  },
+  "id": "NrPQONdk0KHHXVQB",
+  "tags": []
+}

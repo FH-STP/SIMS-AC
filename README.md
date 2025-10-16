@@ -65,3 +65,12 @@ If you get an error like "container name is already in use," it means you have o
 docker compose down --volumes
 
 ```
+## Sast und DB-Schema vom Abgabe Zip
+
+Für mehr infos siehe READ-MEs im Abgabezip von Sebastian
+
+SAST:
+![SAST-Bild](../SIMS-AC/READ_ME/sast.png)
+
+DB-Schema:
+![DB-Bild](../SIMS-AC/READ_ME/unsere_DB.png)
